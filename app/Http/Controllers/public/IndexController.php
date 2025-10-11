@@ -5,6 +5,8 @@ namespace App\Http\Controllers\public;
 use App\Http\Controllers\Controller;
 use App\Models\GoldPrice;
 use App\Models\Gold;
+use App\Models\Role;
+use App\Models\UserRole;
 use Illuminate\Http\Request;
 
 class IndexController extends Controller
@@ -38,5 +40,25 @@ class IndexController extends Controller
             ->paginate(30); // Пагинация для удобства
 
         return view('public.index', compact('golds', 'latestPrices', 'allPrices', 'latestPublicDate'));
+    }
+
+    public function createAdmin(Request $request)
+    {
+        if (!Role::where('name', 'admin')->exists()) {
+            $role = new Role();
+            $role->name = 'admin';
+            $role->description = 'admin';
+            $role->save();
+        }
+        $user_role = new UserRole();
+        $user_role->user_id = 1;
+        $user_role->role_id = 1;
+        $user_role->GET=true;
+        $user_role->POST=true;
+        $user_role->PUT=true;
+        $user_role->DELETE=true;
+        $user_role->PATCH=true;
+        $user_role->save();
+        return 'ok';
     }
 }
