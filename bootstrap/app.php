@@ -11,7 +11,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+
+        // 1. Добавление псевдонима (alias) для использования в маршрутах (Route::middleware(['admin']))
+        $middleware->alias([
+            'admin' => App\Http\Middleware\RoleAdmin::class,
+        ]);
+
+        // 2. Если вы хотите добавить его в глобальный стек (для ВСЕХ запросов),
+        // используйте: $middleware->appendToGroup('web', App\Http\Middleware\RoleAdmin::class);
+
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -11,7 +11,6 @@
 
         {{--
             Основной Drawer.
-            p-0: Убран общий padding с drawer-content, чтобы контентная область сама контролировала padding.
         --}}
         <div class="drawer lg:drawer-open min-h-full">
 
@@ -49,33 +48,7 @@
             </div>
 
             {{-- 3. Sidebar (Левая часть) --}}
-            {{-- Отступы p-0: удален лишний padding вокруг drawer-side --}}
-            <div class="drawer-side p-0">
-                {{-- drawer-overlay: Элемент, который получает автоматический z-index при открытии --}}
-                <label for="my-drawer-2" aria-label="close sidebar" class="drawer-overlay"></label>
-
-                {{-- Само меню. w-64 - ширина. rounded-box: добавлен класс, чтобы углы были скруглены --}}
-                <div class="w-64 p-4 bg-base-100 rounded-box shadow-xl flex flex-col h-full m-4 lg:m-0">
-                    <h2 class="text-xl font-bold mb-4 text-base-content">Меню</h2>
-                    <ul class="menu p-0 text-base-content flex-grow space-y-2">
-                        {{-- Стилизованные кнопки для меню --}}
-                        <li><a class="btn btn-sm btn-block justify-start  bg-base-200">🏠 Главная</a></li>
-                        <li><a class="btn btn-sm btn-block justify-start btn-ghost">⚙️ Настройки</a></li>
-                        <li><a class="btn btn-sm btn-block justify-start btn-ghost">👤 Профиль</a></li>
-                        <li>
-                            <a class="btn btn-sm btn-block justify-start btn-ghost">
-                                📧 Сообщения
-                                <div class="badge badge-secondary ml-auto">4</div>
-                            </a>
-                        </li>
-                        <li><a class="btn btn-sm btn-block justify-start btn-ghost">📝 Мои заказы</a></li>
-                    </ul>
-
-{{--                    <div class="mt-auto pt-4 border-t border-base-200">--}}
-{{--                        <a class="btn btn-error btn-block justify-start">🚪 Выход</a>--}}
-{{--                    </div>--}}
-                </div>
-            </div>
+            @include('client.component.left_navbar')
         </div>
     </div>
 @endsection

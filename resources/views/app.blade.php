@@ -4,7 +4,23 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>@yield('title', 'Gold KG')</title>
+    {{-- SEO: Основные мета-теги --}}
+    <title>@yield('title', 'Gold KG | Актуальные цены на золото и инвестиционные калькуляторы')</title>
+
+    <meta name="description" content="@yield('description', 'Актуальные цены на мерные слитки золота в сомах. Удобный калькулятор для оценки стоимости и получения советов по выгодному инвестированию в драгоценные металлы.')">
+    <meta name="keywords" content="золото, цены на золото, мерные слитки, инвестиции в золото, калькулятор золота, сом, KG">
+
+    {{-- SEO: Канонический URL (важно для избежания дублирования) --}}
+    <link rel="canonical" href="{{ url()->current() }}">
+
+    {{-- SEO: Open Graph (Для социальных сетей) --}}
+    <meta property="og:title" content="@yield('title', 'Gold KG | Актуальные цены на золото')">
+    <meta property="og:description" content="@yield('description', 'Актуальные цены на мерные слитки золота и калькуляторы для инвестиций.')">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ url()->current() }}">
+    {{-- Если у вас есть логотип или изображение для превью, добавьте: --}}
+    {{-- <meta property="og:image" content="{{ asset('images/logo-social.png') }}"> --}}
+
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">

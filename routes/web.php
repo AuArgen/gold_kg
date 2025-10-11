@@ -9,5 +9,7 @@ require __DIR__ . '/public.php';
 Route::middleware('auth')->group(function () {
     require __DIR__ . '/client.php';
 
-    require __DIR__ . '/admin.php';
+    Route::middleware('admin')->group(function () {
+        require __DIR__ . '/admin.php';
+    });
 });
