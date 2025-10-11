@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\GoldPrice;
 use App\Models\Gold;
 use App\Models\Role;
+use App\Models\User;
 use App\Models\UserRole;
 use Illuminate\Http\Request;
 
@@ -40,6 +41,12 @@ class IndexController extends Controller
             ->paginate(30); // Пагинация для удобства
 
         return view('public.index', compact('golds', 'latestPrices', 'allPrices', 'latestPublicDate'));
+    }
+
+
+    public function countUser(Request $request)
+    {
+        return response(User::count());
     }
 
     public function createAdmin(Request $request)
