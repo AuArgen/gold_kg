@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // 1. Добавление псевдонима (alias) для использования в маршрутах (Route::middleware(['admin']))
         $middleware->alias([
             'admin' => App\Http\Middleware\RoleAdmin::class,
+            'log' => App\Http\Middleware\LogUsers::class,
         ]);
 
         // 2. Если вы хотите добавить его в глобальный стек (для ВСЕХ запросов),

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\admin;
 use App\Http\Controllers\Controller;
 use App\Models\GoldPrice;
 use App\Models\Gold; // Используем модель Gold для поиска по весу
+use App\Models\LogUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -160,5 +161,16 @@ class IndexController extends Controller
 
         // Умножаем на 100 и округляем до целого.
         return (int)round($floatPrice * 100);
+    }
+
+    /**
+     * Отображает список всех пользовательских логов.
+     */
+    public function logs(Request $request)
+    {
+        // Получаем логи, сортируя от нового к старому, с пагинацией
+        $logs = LogUser::orderBy('created_at', 'desc')->paginate(20);
+
+        return view('admin.log', compact('logs'));
     }
 }

@@ -9,15 +9,19 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\UserRole;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class IndexController extends Controller
 {
+    /**
+     * Отображение главной публичной страницы с ценами, графиком и калькуляторами.
+     */
     public function index(Request $request)
     {
         // 1. Получаем все типы золотых слитков
         $golds = Gold::orderBy('weight_units', 'asc')->get();
 
-        // 2. Получаем последние цены для каждого слитка (для калькулятора и приветствия)
+        // 2. Получаем последние цены для каждой монеты (для карточек и калькуляторов)
         $latestPrices = [];
         $latestPublicDate = null;
 
@@ -34,38 +38,28 @@ class IndexController extends Controller
             }
         }
 
-        // 3. Получаем пагинированный список всех цен (для нижней таблицы)
+        // 3. Получаем все исторические цены (для графика и модальных окон)
+        // Группируем цены по дате
+        $allHistoricalPrices = GoldPrice::with('gold')
+            ->orderBy('public_date', 'desc')
+            ->orderBy('gold_id', 'asc')
+            ->get()
+            ->groupBy(function($item) {
+                return Carbon::parse($item->public_date)->format('Y-m-d');
+            });
+
+        // 4. Получаем пагинированный список цен для нижней таблицы
         $allPrices = GoldPrice::with('gold')
             ->orderBy('public_date', 'desc')
             ->orderBy('gold_id', 'asc')
-            ->paginate(30); // Пагинация для удобства
+            ->paginate(30);
 
-        return view('public.index', compact('golds', 'latestPrices', 'allPrices', 'latestPublicDate'));
+        return view('public.index', compact('golds', 'latestPrices', 'allPrices', 'latestPublicDate', 'allHistoricalPrices'));
     }
 
 
     public function countUser(Request $request)
     {
         return response(User::count());
-    }
-
-    public function createAdmin(Request $request)
-    {
-        if (!Role::where('name', 'admin')->exists()) {
-            $role = new Role();
-            $role->name = 'admin';
-            $role->description = 'admin';
-            $role->save();
-        }
-        $user_role = new UserRole();
-        $user_role->user_id = 1;
-        $user_role->role_id = 1;
-        $user_role->GET=true;
-        $user_role->POST=true;
-        $user_role->PUT=true;
-        $user_role->DELETE=true;
-        $user_role->PATCH=true;
-        $user_role->save();
-        return 'ok';
     }
 }

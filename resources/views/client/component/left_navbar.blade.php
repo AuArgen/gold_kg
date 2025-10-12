@@ -16,6 +16,11 @@
                         👑 Золото (Premium)
                     </a>
                 </li>
+                <li>
+                    <a href="{{route('admin.logs')}}" class="btn btn-sm btn-block justify-start btn-warning text-warning-content">
+                        Логи (Premium)
+                    </a>
+                </li>
             @endif
 
             <li><a class="btn btn-sm btn-block justify-start btn-ghost">⚙️ Настройки</a></li>
