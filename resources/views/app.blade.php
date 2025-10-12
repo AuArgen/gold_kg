@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
+    <meta name="google-site-verification" content="ut3BRGymSrPXPHreS27VuINWoKjVvyPz5Mxyu36FX-w" />
     {{-- SEO: Основные мета-теги --}}
     <title>@yield('title', 'Gold KG | Актуальные цены на золото и инвестиционные калькуляторы')</title>
 
