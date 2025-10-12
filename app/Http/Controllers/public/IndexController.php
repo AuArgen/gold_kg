@@ -57,6 +57,10 @@ class IndexController extends Controller
         return view('public.index', compact('golds', 'latestPrices', 'allPrices', 'latestPublicDate', 'allHistoricalPrices'));
     }
 
+    public function contact(Request $request)
+    {
+        return view('public.contact');
+    }
 
     public function countUser(Request $request)
     {

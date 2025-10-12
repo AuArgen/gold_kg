@@ -21,6 +21,11 @@
                         Логи (Premium)
                     </a>
                 </li>
+                <li>
+                    <a href="{{route('admin.contact')}}" class="btn btn-sm btn-block justify-start btn-warning text-warning-content">
+                        Контакт (Premium)
+                    </a>
+                </li>
             @endif
 
             <li><a class="btn btn-sm btn-block justify-start btn-ghost">⚙️ Настройки</a></li>

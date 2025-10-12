@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ContactSubmission;
 use App\Models\GoldPrice;
 use App\Models\Gold; // Используем модель Gold для поиска по весу
 use App\Models\LogUser;
@@ -172,5 +173,14 @@ class IndexController extends Controller
         $logs = LogUser::orderBy('created_at', 'desc')->paginate(20);
 
         return view('admin.log', compact('logs'));
+    }
+
+    public function contact(Request $request)
+    {
+        // Получаем все записи, сортируя от новых к старым
+        $submissions = ContactSubmission::orderBy('created_at', 'desc')->paginate(20);
+
+        // Передаем данные в представление
+        return view('admin.contact', compact('submissions'));
     }
 }
