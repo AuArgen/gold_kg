@@ -59,7 +59,7 @@
                                     name="url"
                                     placeholder="https://example.com/gold-prices"
                                     class="grow border-none focus:outline-none bg-base-100"
-                                    value="{{ old('url', 'https://example.com/gold-prices') }}"
+                                    value="{{ old('url', 'https://www.nbkr.kg/printver.jsp?item=2746&lang=KGZ') }}"
                                     required
                                 />
                             </label>
