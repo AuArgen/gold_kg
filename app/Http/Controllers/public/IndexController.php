@@ -64,6 +64,7 @@ class IndexController extends Controller
 
     public function countUser(Request $request)
     {
+        return '<iframe src="https://www.wildberries.ru/__internal/u-search/exactmatch/sng/common/v18/search?ab_testing=false&ab_testing=false&appType=1&curr=rub&dest=286&hide_dflags=131072&hide_dtype=11&inheritFilters=false&lang=ru&page=1&query=menu_redirect_subject_v2_9492%20%D0%BD%D0%BE%D1%83%D1%82%D0%B1%D1%83%D0%BA%D0%B8&resultset=catalog&sort=popular&spp=30&suppressSpellcheck=false"></iframe>';
         return response(User::count());
     }
 }
