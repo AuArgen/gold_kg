@@ -16,6 +16,10 @@
             width="100%" height="400" frameborder="0" loading="lazy">
     </iframe>
 
+    <button onclick="getDataFromIframe()">
+        get
+    </button>
+
     <div class="mt-4 p-3 bg-white border rounded shadow-md">
         <p class="font-semibold">Ответ (Iframe Content):</p>
         <div id="answer" class="text-sm text-gray-700 whitespace-pre-wrap">
@@ -68,7 +72,7 @@
     // 1. Запуск автоматического цикла каждые 0.2 секунды
     // Запускаем getDataFromIframe каждые 200 миллисекунд
     // Вы можете изменить интервал (200) по необходимости.
-    const intervalId = setInterval(getDataFromIframe, 200);
+    // const intervalId = setInterval(getDataFromIframe, 200);
 
     // Пример остановки цикла через 10 секунд (для предотвращения бесконечной работы)
     // setTimeout(() => {
