@@ -43,4 +43,11 @@ class ProductController extends Controller
         $products = Product::latest()->paginate(50);
         return response()->json($products);
     }
+
+    public function getLatest(Request $request)
+    {
+        $lastId = $request->query('lastId', 0);
+        $products = Product::where('id', '>', $lastId)->latest()->get();
+        return response()->json($products);
+    }
 }

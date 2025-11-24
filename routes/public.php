@@ -10,3 +10,4 @@ Route::get('/contact', [IndexController::class, 'contact'])->name('public.contac
 Route::post('/submit_contact', [ContactController::class, 'submit'])->name('public.submit_contact');
 Route::get('/countUser', [IndexController::class, 'countUser'])->name('public.countUser');
 Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+Route::get('/products/latest', [ProductController::class, 'getLatest'])->name('products.latest');
