@@ -39,7 +39,8 @@ class ProductController extends Controller
 
     public function index()
     {
-        $products = Product::orderby('id','desc')->get();
+        // Сортируем и добавляем пагинацию по 50 товаров на страницу
+        $products = Product::latest()->paginate(50);
         return response()->json($products);
     }
 }
