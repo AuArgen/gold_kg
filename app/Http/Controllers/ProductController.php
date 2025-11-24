@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
 
 class ProductController extends Controller
 {
@@ -13,7 +12,7 @@ class ProductController extends Controller
         $productsData = $request->input('products', []);
 
         foreach ($productsData as $productData) {
-            // Проверяем, есть ли ID, без него запись бесполезна
+            // Пропускаем, если нет ID
             if (empty($productData['id'])) {
                 continue;
             }
@@ -21,17 +20,16 @@ class ProductController extends Controller
             Product::updateOrCreate(
                 ['id' => $productData['id']],
                 [
-                    'name' => Arr::get($productData, 'name', 'Без названия'),
-                    'brand' => Arr::get($productData, 'brand' ?? 'Not found', 'Неизвестный бренд'),
-                    'brandId' => Arr::get($productData, 'brandId', 0),
-                    'feedbacks' => Arr::get($productData, 'feedbacks', 0),
-                    'reviewRating' => Arr::get($productData, 'reviewRating', 0.0),
-                    // Безопасно получаем вложенную цену, по умолчанию 0
-                    'price' => data_get($productData, 'sizes.0.price.product', 0),
-                    'supplier' => Arr::get($productData, 'supplier', 'Неизвестный поставщик'),
-                    'supplierId' => Arr::get($productData, 'supplierId', 0),
-                    'supplierRating' => Arr::get($productData, 'supplierRating', 0.0),
-                    'totalQuantity' => Arr::get($productData, 'totalQuantity', 0),
+                    'name' => $productData['name'] ?? 'Без названия',
+                    'brand' => $productData['brand'] ?? 'Неизвестный бренд',
+                    'brandId' => $productData['brandId'] ?? 0,
+                    'feedbacks' => $productData['feedbacks'] ?? 0,
+                    'reviewRating' => $productData['reviewRating'] ?? 0.0,
+                    'price' => data_get($productData, 'sizes.0.price.product') ?? 0,
+                    'supplier' => $productData['supplier'] ?? 'Неизвестный поставщик',
+                    'supplierId' => $productData['supplierId'] ?? 0,
+                    'supplierRating' => $productData['supplierRating'] ?? 0.0,
+                    'totalQuantity' => $productData['totalQuantity'] ?? 0,
                 ]
             );
         }
