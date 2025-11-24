@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 
 class ProductController extends Controller
 {
@@ -12,19 +13,25 @@ class ProductController extends Controller
         $productsData = $request->input('products', []);
 
         foreach ($productsData as $productData) {
+            // Проверяем, есть ли ID, без него запись бесполезна
+            if (empty($productData['id'])) {
+                continue;
+            }
+
             Product::updateOrCreate(
                 ['id' => $productData['id']],
                 [
-                    'name' => $productData['name'],
-                    'brand' => $productData['brand'],
-                    'brandId' => $productData['brandId'],
-                    'feedbacks' => $productData['feedbacks'],
-                    'reviewRating' => $productData['reviewRating'],
-                    'price' => $productData['sizes'][0]['price']['product'],
-                    'supplier' => $productData['supplier'],
-                    'supplierId' => $productData['supplierId'],
-                    'supplierRating' => $productData['supplierRating'],
-                    'totalQuantity' => $productData['totalQuantity'],
+                    'name' => Arr::get($productData, 'name', 'Без названия'),
+                    'brand' => Arr::get($productData, 'brand', 'Неизвестный бренд'),
+                    'brandId' => Arr::get($productData, 'brandId', 0),
+                    'feedbacks' => Arr::get($productData, 'feedbacks', 0),
+                    'reviewRating' => Arr::get($productData, 'reviewRating', 0.0),
+                    // Безопасно получаем вложенную цену, по умолчанию 0
+                    'price' => data_get($productData, 'sizes.0.price.product', 0),
+                    'supplier' => Arr::get($productData, 'supplier', 'Неизвестный поставщик'),
+                    'supplierId' => Arr::get($productData, 'supplierId', 0),
+                    'supplierRating' => Arr::get($productData, 'supplierRating', 0.0),
+                    'totalQuantity' => Arr::get($productData, 'totalQuantity', 0),
                 ]
             );
         }
