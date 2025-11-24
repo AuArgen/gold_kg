@@ -30,7 +30,7 @@
 
     let currentPage = 1;
     let lastPage = 1;
-    let latestTimestamp = null; // Временная метка самого нового товара
+    let latestProductId = 0; // ID самого нового загруженного товара
 
     function createProductCard(product) {
         const creationDate = new Date(product.created_at).toLocaleString('ru-RU');
@@ -64,9 +64,9 @@
         products.reverse().forEach(product => {
             productsContainer.insertBefore(createProductCard(product), productsContainer.firstChild);
         });
-        // Обновляем временную метку самого нового товара
+        // Обновляем ID самого нового товара
         if (products.length > 0) {
-            latestTimestamp = products[0].created_at;
+            latestProductId = products[0].id;
         }
     }
 
@@ -80,9 +80,8 @@
             const result = await response.json();
 
             if (page === 1 && result.data.length > 0) {
-                // Устанавливаем временную метку самого первого товара
-                if (!latestTimestamp) {
-                    latestTimestamp = result.data[0].created_at;
+                if (latestProductId === 0) {
+                    latestProductId = result.data[0].id; // Устанавливаем ID самого первого товара
                 }
             }
 
@@ -104,10 +103,10 @@
 
     // Проверка наличия новых товаров
     async function checkForLatestProducts() {
-        if (!latestTimestamp) return; // Не проверять, если еще ничего не загружено
+        if (latestProductId === 0) return; // Не проверять, если еще ничего не загружено
 
         try {
-            const response = await fetch(`{{ route('products.latest') }}?lastTimestamp=${latestTimestamp}`);
+            const response = await fetch(`{{ route('products.latest') }}?lastId=${latestProductId}`);
             const newProducts = await response.json();
 
             if (newProducts.length > 0) {
@@ -128,8 +127,8 @@
         }
     });
 
-    // Запускаем проверку новых товаров каждые 3 секунды
-    setInterval(checkForLatestProducts, 3000);
+    // Запускаем проверку новых товаров каждые 0.8 секунды
+    setInterval(checkForLatestProducts, 800);
 
 </script>
 

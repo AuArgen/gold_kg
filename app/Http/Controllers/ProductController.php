@@ -46,16 +46,8 @@ class ProductController extends Controller
 
     public function getLatest(Request $request)
     {
-        $lastTimestamp = $request->query('lastTimestamp');
-
-        $query = Product::query();
-
-        if ($lastTimestamp) {
-            $query->where('created_at', '>', $lastTimestamp);
-        }
-
-        $products = $query->latest()->get();
-
+        $lastId = $request->query('lastId', 0);
+        $products = Product::where('id', '>', $lastId)->latest()->get();
         return response()->json($products);
     }
 }
