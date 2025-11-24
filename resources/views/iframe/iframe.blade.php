@@ -35,16 +35,11 @@
     function createProductCard(product) {
         const creationDate = new Date(product.created_at).toLocaleString('ru-RU');
 
-        // Создаем ссылку
-        const link = document.createElement('a');
-        link.href = `https://www.wildberries.ru/catalog/${product.id}/detail.aspx`;
-        link.target = "_blank"; // Открывать в новой вкладке
-        link.rel = "noopener noreferrer";
-        link.className = "block bg-white p-4 rounded-lg shadow-md transition-transform transform hover:-translate-y-1";
-        link.setAttribute('data-product-id', product.id);
+        const card = document.createElement('div');
+        card.className = "bg-white p-4 rounded-lg shadow-md";
+        card.setAttribute('data-product-id', product.id);
 
-        // Добавляем содержимое в ссылку
-        link.innerHTML = `
+        card.innerHTML = `
             <h3 class="text-lg font-bold text-gray-800">${product.name}</h3>
             <p class="text-gray-600">Бренд: ${product.brand}</p>
             <p class="text-green-600 font-semibold mt-2">Цена: ${product.price / 100} руб.</p>
@@ -54,8 +49,19 @@
             </div>
             <p class="text-sm text-gray-500 mt-1">В наличии: ${product.totalQuantity} шт.</p>
             <p class="text-xs text-gray-400 mt-2">Добавлено: ${creationDate}</p>
+            <div class="mt-4 border-t pt-4">
+                <iframe
+                    src="https://www.wildberries.ru/catalog/${product.id}/detail.aspx"
+                    width="100%"
+                    height="300"
+                    frameborder="0"
+                    loading="lazy"
+                    sandbox="allow-scripts allow-same-origin"
+                    >
+                </iframe>
+            </div>
         `;
-        return link;
+        return card;
     }
 
     // Функция для добавления старых товаров в конец списка
