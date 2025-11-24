@@ -22,7 +22,7 @@ class ProductController extends Controller
                 ['id' => $productData['id']],
                 [
                     'name' => Arr::get($productData, 'name', 'Без названия'),
-                    'brand' => Arr::get($productData, 'brand', 'Неизвестный бренд'),
+                    'brand' => Arr::get($productData, 'brand' ?? 'Not found', 'Неизвестный бренд'),
                     'brandId' => Arr::get($productData, 'brandId', 0),
                     'feedbacks' => Arr::get($productData, 'feedbacks', 0),
                     'reviewRating' => Arr::get($productData, 'reviewRating', 0.0),
