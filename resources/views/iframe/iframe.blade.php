@@ -30,7 +30,7 @@
 
     let currentPage = 1;
     let lastPage = 1;
-    let latestProductId = 0; // ID самого нового загруженного товара
+    let latestTimestamp = null; // Временная метка самого нового товара
 
     function createProductCard(product) {
         const creationDate = new Date(product.created_at).toLocaleString('ru-RU');
@@ -64,9 +64,9 @@
         products.reverse().forEach(product => {
             productsContainer.insertBefore(createProductCard(product), productsContainer.firstChild);
         });
-        // Обновляем ID самого нового товара
+        // Обновляем временную метку самого нового товара
         if (products.length > 0) {
-            latestProductId = products[0].id;
+            latestTimestamp = products[0].created_at;
         }
     }
 
@@ -80,7 +80,10 @@
             const result = await response.json();
 
             if (page === 1 && result.data.length > 0) {
-                latestProductId = result.data[0].id; // Устанавливаем ID самого первого товара
+                // Устанавливаем временную метку самого первого товара
+                if (!latestTimestamp) {
+                    latestTimestamp = result.data[0].created_at;
+                }
             }
 
             appendProducts(result.data);
@@ -101,10 +104,10 @@
 
     // Проверка наличия новых товаров
     async function checkForLatestProducts() {
-        if (latestProductId === 0) return; // Не проверять, если еще ничего не загружено
+        if (!latestTimestamp) return; // Не проверять, если еще ничего не загружено
 
         try {
-            const response = await fetch(`{{ route('products.latest') }}?lastId=${latestProductId}`);
+            const response = await fetch(`{{ route('products.latest') }}?lastTimestamp=${latestTimestamp}`);
             const newProducts = await response.json();
 
             if (newProducts.length > 0) {
@@ -126,7 +129,7 @@
     });
 
     // Запускаем проверку новых товаров каждые 3 секунды
-    setInterval(checkForLatestProducts, 800);
+    setInterval(checkForLatestProducts, 3000);
 
 </script>
 
