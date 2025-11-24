@@ -20,7 +20,7 @@ class ProductController extends Controller
                     'brandId' => $productData['brandId'],
                     'feedbacks' => $productData['feedbacks'],
                     'reviewRating' => $productData['reviewRating'],
-                    'price' => $productData['price']['product'],
+                    'price' => $productData['sizes'][0]['price']['product'],
                     'supplier' => $productData['supplier'],
                     'supplierId' => $productData['supplierId'],
                     'supplierRating' => $productData['supplierRating'],
