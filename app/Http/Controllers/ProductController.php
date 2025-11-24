@@ -40,14 +40,14 @@ class ProductController extends Controller
     public function index()
     {
         // Сортируем и добавляем пагинацию по 50 товаров на страницу
-        $products = Product::latest()->paginate(50);
+        $products = Product::orderby('id', 'desc')->paginate(50);
         return response()->json($products);
     }
 
     public function getLatest(Request $request)
     {
         $lastId = $request->query('lastId', 0);
-        $products = Product::where('id', '>', $lastId)->latest()->get();
+        $products = Product::where('id', '>', $lastId)->orderby('id', 'desc')->get();
         return response()->json($products);
     }
 }
