@@ -40,10 +40,31 @@ class ProductController extends Controller
         return response()->json(['message' => 'Products stored successfully']);
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        // Сортируем по дате создания от новых к старым и добавляем пагинацию по 50 товаров на страницу
-        $products = Product::latest()->paginate(50);
+        $query = Product::query();
+
+        // Фильтр по поисковому запросу (ищет в title и brand)
+        if ($search = $request->query('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('brand', 'like', "%{$search}%");
+            });
+        }
+
+        // Фильтр по бренду
+        if ($brand = $request->query('brand')) {
+            $query->where('brand', $brand);
+        }
+
+        // Фильтр по минимальной скидке
+        if ($minDiscount = $request->query('min_discount')) {
+            $query->where('discountPercentage', '>=', $minDiscount);
+        }
+
+        // Сортируем по дате создания от новых к старым и добавляем пагинацию
+        $products = $query->latest()->paginate(50);
+
         return response()->json($products);
     }
 
@@ -52,5 +73,16 @@ class ProductController extends Controller
         $lastId = $request->query('lastId', 0); // lastId здесь - это наш внутренний ID
         $products = Product::where('id', '>', $lastId)->latest()->get();
         return response()->json($products);
+    }
+
+    public function getBrands()
+    {
+        $brands = Product::whereNotNull('brand')
+            ->where('brand', '!=', '')
+            ->distinct()
+            ->orderBy('brand')
+            ->pluck('brand');
+
+        return response()->json($brands);
     }
 }
