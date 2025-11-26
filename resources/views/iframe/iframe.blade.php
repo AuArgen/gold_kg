@@ -61,7 +61,7 @@
     let isLoading = false;
 
     function createProductCard(product) {
-        const creationDate = new Date(product.created_at).toLocaleString('ru-RU');
+        const updatedDate = new Date(product.updated_at).toLocaleString('ru-RU'); // Используем updated_at
         const link = document.createElement('a');
         link.href = product.url || `https://www.wildberries.ru/catalog/${product.product_id}/detail.aspx`;
         link.target = "_blank";
@@ -113,7 +113,7 @@
             <p class="text-gray-600">Бренд: ${product.brand || 'Неизвестно'}</p>
             ${priceDisplay}
             ${ratingDisplay}
-            <p class="text-xs text-gray-400 mt-2">Добавлено: ${creationDate}</p>
+            <p class="text-xs text-gray-400 mt-2">Обновлено: ${updatedDate}</p>
         `;
         return link;
     }
@@ -123,7 +123,6 @@
     }
 
     function prependOrUpdateProducts(products) {
-        // Сортируем, чтобы самый новый был вверху (так как сервер отдает latest)
         products.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
 
         products.forEach(product => {
@@ -134,7 +133,6 @@
             productsContainer.insertBefore(createProductCard(product), productsContainer.firstChild);
         });
 
-        // Обновляем временную метку на самую свежую из полученных
         if (products.length > 0) {
             latestTimestamp = products[0].updated_at;
         }
@@ -171,7 +169,6 @@
             if (page === 1) {
                 totalProductsCount.textContent = result.total;
                 if (result.data.length > 0 && !latestTimestamp) {
-                    // Устанавливаем самую свежую метку из первой загрузки
                     latestTimestamp = result.data.reduce((max, p) => p.updated_at > max ? p.updated_at : max, result.data[0].updated_at);
                 }
             }
@@ -218,7 +215,6 @@
 
             if (newProducts.length > 0) {
                 prependOrUpdateProducts(newProducts);
-                // Не увеличиваем счетчик, так как это могут быть обновления, а не новые товары
             }
         } catch (error) {
             console.error('Ошибка при проверке новых товаров:', error);
