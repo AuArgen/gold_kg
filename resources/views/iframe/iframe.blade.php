@@ -11,7 +11,12 @@
 <body class="p-8 bg-gray-100 font-sans">
 
 <div class="container mx-auto">
-    <h1 class="text-2xl font-bold mb-4">Список товаров</h1>
+    <div class="flex justify-between items-center mb-4">
+        <h1 class="text-2xl font-bold">Список товаров</h1>
+        <div class="text-lg">
+            Найдено: <span id="total-products-count" class="font-bold">0</span>
+        </div>
+    </div>
 
     <!-- Панель фильтров -->
     <div class="bg-white p-4 rounded-lg shadow-md mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
@@ -47,6 +52,7 @@
     const searchInput = document.getElementById('search-input');
     const brandSelect = document.getElementById('brand-select');
     const discountInput = document.getElementById('discount-input');
+    const totalProductsCount = document.getElementById('total-products-count');
 
     let currentPage = 1;
     let lastPage = 1;
@@ -61,7 +67,7 @@
         link.target = "_blank";
         link.rel = "noopener noreferrer";
         link.className = "block bg-white p-4 rounded-lg shadow-md transition-transform transform hover:-translate-y-1 relative";
-        link.setAttribute('data-product-id', product.product_id); // Используем внешний ID для идентификации карточки
+        link.setAttribute('data-product-id', product.product_id);
 
         let priceChangeInfo = '';
         if (product.discountPercentage && product.discountPercentage > 0) {
@@ -134,8 +140,9 @@
             const response = await fetch(`{{ route('products.index') }}?${params.toString()}`);
             const result = await response.json();
 
-            if (page === 1 && result.data.length > 0) {
-                if (!latestTimestamp) {
+            if (page === 1) {
+                totalProductsCount.textContent = result.total; // Обновляем общее количество
+                if (result.data.length > 0) {
                     latestTimestamp = result.data[0].updated_at;
                 }
             }
@@ -182,6 +189,8 @@
 
             if (newProducts.length > 0) {
                 prependOrUpdateProducts(newProducts);
+                // Обновляем общий счетчик
+                totalProductsCount.textContent = parseInt(totalProductsCount.textContent) + newProducts.length;
             }
         } catch (error) {
             console.error('Ошибка при проверке новых товаров:', error);
