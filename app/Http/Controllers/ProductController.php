@@ -43,18 +43,20 @@ class ProductController extends Controller
             ];
 
             $url = $dataToInsert['url'] ?? '#';
-            $imageUrl = $dataToInsert['imageUrl'] ? "[.]( {$dataToInsert['imageUrl']} )" : ""; // Невидимая ссылка на картинку
+            $imageUrl = $dataToInsert['imageUrl'] ? "[\u{200B}]({$dataToInsert['imageUrl']})" : ""; // Zero-width space for image link
 
             if ($product) {
                 if ($product->currentPrice != $newPrice) {
                     $product->update($dataToInsert);
-                    $title = $product->title;
-                    $changedProducts[] = "✏️ *[{$title}]({$url})*{$imageUrl}\n_Цена изменилась:_ {$product->currentPrice} -> {$newPrice}";
+                    $title = $this->escapeMarkdownV2($product->title);
+                    $priceChange = $this->escapeMarkdownV2("{$product->currentPrice} -> {$newPrice}");
+                    $changedProducts[] = "✏️ *[{$title}]({$url})*{$imageUrl}\n_Цена изменилась:_ {$priceChange}";
                 }
             } else {
                 $newProduct = Product::create(['product_id' => $productData['id']] + $dataToInsert);
-                $title = $newProduct->title;
-                $changedProducts[] = "✨ *[{$title}]({$url})*{$imageUrl}\n_Новый товар по цене:_ {$newPrice}";
+                $title = $this->escapeMarkdownV2($newProduct->title);
+                $price = $this->escapeMarkdownV2($newPrice);
+                $changedProducts[] = "✨ *[{$title}]({$url})*{$imageUrl}\n_Новый товар по цене:_ {$price}";
             }
         }
 
@@ -65,6 +67,15 @@ class ProductController extends Controller
         return response()->json([
             'message' => "Processing complete. Changes detected: " . count($changedProducts)
         ]);
+    }
+
+    private function escapeMarkdownV2($text)
+    {
+        return str_replace(
+            ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'],
+            ['\_', '\*', '\[', '\]', '\(', '\)', '\~', '\`', '\>', '\#', '\+', '\-', '\=', '\|', '\{', '\}', '\.', '\!'],
+            $text
+        );
     }
 
     private function sendTelegramNotification(array $products)
@@ -82,8 +93,8 @@ class ProductController extends Controller
         Http::post("https://api.telegram.org/bot{$token}/sendMessage", [
             'chat_id' => $chatId,
             'text' => $message,
-            'parse_mode' => 'MarkdownV2', // Используем MarkdownV2 для лучшей поддержки
-            'disable_web_page_preview' => false, // Включаем превью для ссылок
+            'parse_mode' => 'MarkdownV2',
+            'disable_web_page_preview' => false,
         ]);
     }
 
@@ -106,7 +117,7 @@ class ProductController extends Controller
             $query->where('discountPercentage', '>=', $minDiscount);
         }
 
-        $products = $query->latest()->paginate(2000);
+        $products = $query->latest()->paginate(50);
 
         return response()->json($products);
     }
