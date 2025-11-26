@@ -12,24 +12,27 @@ class ProductController extends Controller
         $productsData = $request->input('products', []);
 
         foreach ($productsData as $productData) {
-            // Пропускаем, если нет ID
-            if (empty($productData['id'])) {
+            // Пропускаем, если нет product_id
+            if (empty($productData['id'])) { // 'id' из JS данных теперь наш product_id
                 continue;
             }
 
             Product::updateOrCreate(
-                ['id' => $productData['id']],
+                ['product_id' => $productData['id']], // Ищем по product_id
                 [
+                    'url' => $productData['url'] ?? null,
+                    'imageUrl' => $productData['imageUrl'] ?? null,
+                    'brand' => $productData['brand'] ?? null,
                     'name' => $productData['name'] ?? 'Без названия',
-                    'brand' => $productData['brand'] ?? 'Неизвестный бренд',
-                    'brandId' => $productData['brandId'] ?? 0,
-                    'feedbacks' => $productData['feedbacks'] ?? 0,
-                    'reviewRating' => $productData['reviewRating'] ?? 0.0,
-                    'price' => data_get($productData, 'sizes.0.price.product') ?? 0,
-                    'supplier' => $productData['supplier'] ?? 'Неизвестный поставщик',
-                    'supplierId' => $productData['supplierId'] ?? 0,
-                    'supplierRating' => $productData['supplierRating'] ?? 0.0,
-                    'totalQuantity' => $productData['totalQuantity'] ?? 0,
+                    'title' => $productData['title'] ?? 'Без названия',
+                    'currentPrice' => $productData['currentPrice'] ?? 0,
+                    'oldPrice' => $productData['oldPrice'] ?? null,
+                    'discountPercentage' => $productData['discountPercentage'] ?? null,
+                    'isNew' => $productData['isNew'] ?? false,
+                    'isGoodPrice' => $productData['isGoodPrice'] ?? false,
+                    'actionPromotion' => $productData['actionPromotion'] ?? null,
+                    'rating' => $productData['rating'] ?? null,
+                    'reviewCount' => $productData['reviewCount'] ?? null,
                 ]
             );
         }
@@ -39,15 +42,15 @@ class ProductController extends Controller
 
     public function index()
     {
-        // Сортируем и добавляем пагинацию по 50 товаров на страницу
-        $products = Product::orderby('id', 'desc')->paginate(50);
+        // Сортируем по дате создания от новых к старым и добавляем пагинацию по 50 товаров на страницу
+        $products = Product::latest()->paginate(50);
         return response()->json($products);
     }
 
     public function getLatest(Request $request)
     {
-        $lastId = $request->query('lastId', 0);
-        $products = Product::where('id', '>', $lastId)->orderby('id', 'desc')->get();
+        $lastId = $request->query('lastId', 0); // lastId здесь - это наш внутренний ID
+        $products = Product::where('id', '>', $lastId)->latest()->get();
         return response()->json($products);
     }
 }

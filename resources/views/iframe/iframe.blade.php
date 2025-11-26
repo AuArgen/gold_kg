@@ -30,29 +30,67 @@
 
     let currentPage = 1;
     let lastPage = 1;
-    let latestProductId = 0; // ID самого нового загруженного товара
+    let latestProductId = 0; // Наш внутренний ID самого нового загруженного товара
 
     function createProductCard(product) {
         const creationDate = new Date(product.created_at).toLocaleString('ru-RU');
 
-        // Создаем ссылку
         const link = document.createElement('a');
-        link.href = `https://www.wildberries.ru/catalog/${product.id}/detail.aspx`;
+        // Используем product.url, если есть, иначе формируем из product_id
+        link.href = product.url || `https://www.wildberries.ru/catalog/${product.product_id}/detail.aspx`;
         link.target = "_blank"; // Открывать в новой вкладке
         link.rel = "noopener noreferrer";
-        link.className = "block bg-white p-4 rounded-lg shadow-md transition-transform transform hover:-translate-y-1";
-        link.setAttribute('data-product-id', product.id);
+        link.className = "block bg-white p-4 rounded-lg shadow-md transition-transform transform hover:-translate-y-1 relative";
+        link.setAttribute('data-internal-id', product.id); // Используем наш внутренний ID
 
-        // Добавляем содержимое в ссылку
+        let priceDisplay = `<p class="text-green-600 font-semibold mt-2">Цена: ${product.currentPrice / 100} руб.</p>`;
+        if (product.oldPrice && product.oldPrice > product.currentPrice) {
+            priceDisplay = `
+                <p class="text-gray-500 line-through text-sm">${product.oldPrice / 100} руб.</p>
+                <p class="text-green-600 font-bold text-lg">${product.currentPrice / 100} руб.</p>
+            `;
+        }
+
+        let discountBadge = '';
+        if (product.discountPercentage && product.discountPercentage > 0) {
+            discountBadge = `<span class="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">- ${product.discountPercentage}%</span>`;
+        }
+
+        let newBadge = '';
+        if (product.isNew) {
+            newBadge = `<span class="absolute top-2 left-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full">Новинка</span>`;
+        }
+
+        let goodPriceBadge = '';
+        if (product.isGoodPrice) {
+            goodPriceBadge = `<span class="absolute bottom-2 right-2 bg-purple-500 text-white text-xs font-bold px-2 py-1 rounded-full">Выгодная цена</span>`;
+        }
+
+        let actionPromotionDisplay = '';
+        if (product.actionPromotion) {
+            actionPromotionDisplay = `<p class="text-orange-500 text-xs mt-1">${product.actionPromotion}</p>`;
+        }
+
+        let ratingDisplay = '';
+        if (product.rating !== null && product.reviewCount !== null) {
+            ratingDisplay = `
+                <div class="flex items-center mt-2">
+                    <span class="text-yellow-500">★</span>
+                    <span class="ml-1 text-gray-700">${product.rating} (${product.reviewCount} отзывов)</span>
+                </div>
+            `;
+        }
+
         link.innerHTML = `
-            <h3 class="text-lg font-bold text-gray-800">${product.name}</h3>
-            <p class="text-gray-600">Бренд: ${product.brand}</p>
-            <p class="text-green-600 font-semibold mt-2">Цена: ${product.price / 100} руб.</p>
-            <div class="flex items-center mt-2">
-                <span class="text-yellow-500">★</span>
-                <span class="ml-1 text-gray-700">${product.reviewRating} (${product.feedbacks} отзывов)</span>
-            </div>
-            <p class="text-sm text-gray-500 mt-1">В наличии: ${product.totalQuantity} шт.</p>
+            ${discountBadge}
+            ${newBadge}
+            <img src="${product.imageUrl || 'https://via.placeholder.com/150'}" alt="${product.name}" class="w-full h-48 object-contain mb-4 rounded">
+            <h3 class="text-lg font-bold text-gray-800">${product.title || product.name}</h3>
+            <p class="text-gray-600">Бренд: ${product.brand || 'Неизвестно'}</p>
+            ${priceDisplay}
+            ${ratingDisplay}
+            ${actionPromotionDisplay}
+            ${goodPriceBadge}
             <p class="text-xs text-gray-400 mt-2">Добавлено: ${creationDate}</p>
         `;
         return link;
@@ -73,7 +111,7 @@
         });
         // Обновляем ID самого нового товара
         if (products.length > 0) {
-            latestProductId = products[0].id;
+            latestProductId = products[0].id; // Обновляем наш внутренний ID
         }
     }
 
@@ -88,7 +126,7 @@
 
             if (page === 1 && result.data.length > 0) {
                 if (latestProductId === 0) {
-                    latestProductId = result.data[0].id; // Устанавливаем ID самого первого товара
+                    latestProductId = result.data[0].id; // Устанавливаем наш внутренний ID самого первого товара
                 }
             }
 
@@ -134,8 +172,8 @@
         }
     });
 
-    // Запускаем проверку новых товаров каждые 0.8 секунды
-    setInterval(checkForLatestProducts, 800);
+    // Запускаем проверку новых товаров каждые 3 секунды
+    setInterval(checkForLatestProducts, 500);
 
 </script>
 

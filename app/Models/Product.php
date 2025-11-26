@@ -10,16 +10,29 @@ class Product extends Model
     use HasFactory;
 
     protected $fillable = [
-        'id',
-        'name',
+        'product_id',
+        'url',
+        'imageUrl',
         'brand',
-        'brandId',
-        'feedbacks',
-        'reviewRating',
-        'price',
-        'supplier',
-        'supplierId',
-        'supplierRating',
-        'totalQuantity',
+        'name',
+        'title',
+        'currentPrice',
+        'oldPrice',
+        'discountPercentage',
+        'isNew',
+        'isGoodPrice',
+        'actionPromotion',
+        'rating',
+        'reviewCount',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'isNew' => 'boolean',
+        'isGoodPrice' => 'boolean',
     ];
 }
