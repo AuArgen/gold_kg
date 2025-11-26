@@ -43,11 +43,11 @@
         link.className = "block bg-white p-4 rounded-lg shadow-md transition-transform transform hover:-translate-y-1 relative";
         link.setAttribute('data-internal-id', product.id); // Используем наш внутренний ID
 
-        let priceDisplay = `<p class="text-green-600 font-semibold mt-2">Цена: ${product.currentPrice / 100} руб.</p>`;
+        let priceDisplay = `<p class="text-green-600 font-semibold mt-2">Цена: ${product.currentPrice} руб.</p>`;
         if (product.oldPrice && product.oldPrice > product.currentPrice) {
             priceDisplay = `
-                <p class="text-gray-500 line-through text-sm">${product.oldPrice / 100} руб.</p>
-                <p class="text-green-600 font-bold text-lg">${product.currentPrice / 100} руб.</p>
+                <p class="text-gray-500 line-through text-sm">${product.oldPrice} руб.</p>
+                <p class="text-green-600 font-bold text-lg">${product.currentPrice } руб.</p>
             `;
         }
 
