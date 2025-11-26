@@ -23,7 +23,6 @@
             <label for="brand-select" class="block text-sm font-medium text-gray-700">Бренд</label>
             <select id="brand-select" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                 <option value="">Все бренды</option>
-                <!-- Бренды будут загружены сюда -->
             </select>
         </div>
         <div>
@@ -32,9 +31,7 @@
         </div>
     </div>
 
-    <div id="products-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Товары будут загружены сюда -->
-    </div>
+    <div id="products-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
     <div id="loader" class="text-center p-4" style="display: none;">Загрузка...</div>
     <div class="text-center mt-6">
         <button id="load-more-btn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" style="display: none;">
@@ -53,7 +50,7 @@
 
     let currentPage = 1;
     let lastPage = 1;
-    let latestProductId = 0;
+    let latestTimestamp = null;
     let searchTimeout;
     let isLoading = false;
 
@@ -64,9 +61,12 @@
         link.target = "_blank";
         link.rel = "noopener noreferrer";
         link.className = "block bg-white p-4 rounded-lg shadow-md transition-transform transform hover:-translate-y-1 relative";
-        link.setAttribute('data-internal-id', product.id);
+        link.setAttribute('data-product-id', product.product_id); // Используем внешний ID для идентификации карточки
 
-        let priceChangeInfo =  `<p class="text-red-500 text-sm font-bold"> ${product.discountPercentage}</p>`;
+        let priceChangeInfo = '';
+        if (product.discountPercentage && product.discountPercentage > 0) {
+            priceChangeInfo = `<p class="text-red-500 text-sm font-bold">↓ ${product.discountPercentage}%</p>`;
+        }
 
         let priceDisplay = `<p class="text-green-600 font-semibold mt-2">${product.currentPrice} руб.</p>`;
         if (product.oldPrice && product.oldPrice > product.currentPrice) {
@@ -79,34 +79,11 @@
             `;
         }
 
-        let discountBadge = '';
-        if (product.discountPercentage && product.discountPercentage > 0) {
-            discountBadge = `<span class="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">- ${product.discountPercentage}%</span>`;
-        }
-
-        let newBadge = '';
-        if (product.isNew) {
-            newBadge = `<span class="absolute top-2 left-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full">Новинка</span>`;
-        }
-
-        let ratingDisplay = '';
-        if (product.rating !== null && product.reviewCount !== null) {
-            ratingDisplay = `
-                <div class="flex items-center mt-2">
-                    <span class="text-yellow-500">★</span>
-                    <span class="ml-1 text-gray-700">${product.rating} (${product.reviewCount} отзывов)</span>
-                </div>
-            `;
-        }
-
         link.innerHTML = `
-            ${discountBadge}
-            ${newBadge}
             <img src="${product.imageUrl || 'https://via.placeholder.com/150'}" alt="${product.name}" class="w-full h-48 object-contain mb-4 rounded">
             <h3 class="text-lg font-bold text-gray-800">${product.title || product.name}</h3>
             <p class="text-gray-600">Бренд: ${product.brand || 'Неизвестно'}</p>
             ${priceDisplay}
-            ${ratingDisplay}
             <p class="text-xs text-gray-400 mt-2">Добавлено: ${creationDate}</p>
         `;
         return link;
@@ -116,12 +93,16 @@
         products.forEach(product => productsContainer.appendChild(createProductCard(product)));
     }
 
-    function prependProducts(products) {
+    function prependOrUpdateProducts(products) {
         products.reverse().forEach(product => {
+            const existingCard = document.querySelector(`[data-product-id='${product.product_id}']`);
+            if (existingCard) {
+                existingCard.remove();
+            }
             productsContainer.insertBefore(createProductCard(product), productsContainer.firstChild);
         });
         if (products.length > 0) {
-            latestProductId = products[0].id;
+            latestTimestamp = products[0].updated_at;
         }
     }
 
@@ -136,7 +117,7 @@
         if (isSearch) {
             productsContainer.innerHTML = '';
             currentPage = 1;
-            latestProductId = 0;
+            latestTimestamp = null;
         }
 
         loader.style.display = 'block';
@@ -154,7 +135,9 @@
             const result = await response.json();
 
             if (page === 1 && result.data.length > 0) {
-                latestProductId = result.data[0].id;
+                if (!latestTimestamp) {
+                    latestTimestamp = result.data[0].updated_at;
+                }
             }
 
             appendProducts(result.data);
@@ -189,16 +172,16 @@
     }
 
     async function checkForLatestProducts() {
-        if (areFiltersActive() || latestProductId === 0) {
+        if (areFiltersActive() || !latestTimestamp) {
             return;
         }
 
         try {
-            const response = await fetch(`{{ route('products.latest') }}?lastId=${latestProductId}`);
+            const response = await fetch(`{{ route('products.latest') }}?lastTimestamp=${latestTimestamp}`);
             const newProducts = await response.json();
 
             if (newProducts.length > 0) {
-                prependProducts(newProducts);
+                prependOrUpdateProducts(newProducts);
             }
         } catch (error) {
             console.error('Ошибка при проверке новых товаров:', error);
