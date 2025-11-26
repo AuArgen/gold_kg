@@ -17,6 +17,13 @@ class ProductController extends Controller
                 continue;
             }
 
+            // Очищаем значение скидки, оставляя только цифры
+            $discount = $productData['discountPercentage'] ?? null;
+            if ($discount) {
+                // Удаляем все, кроме цифр (и знака минуса, если он есть)
+                $discount = (int) preg_replace('/[^0-9-]/', '', $discount);
+            }
+
             Product::updateOrCreate(
                 ['product_id' => $productData['id']], // Ищем по product_id
                 [
@@ -27,7 +34,7 @@ class ProductController extends Controller
                     'title' => $productData['title'] ?? 'Без названия',
                     'currentPrice' => $productData['currentPrice'] ?? 0,
                     'oldPrice' => $productData['oldPrice'] ?? null,
-                    'discountPercentage' => $productData['discountPercentage'] ?? null,
+                    'discountPercentage' => $discount, // Сохраняем очищенное число
                     'isNew' => $productData['isNew'] ?? false,
                     'isGoodPrice' => $productData['isGoodPrice'] ?? false,
                     'actionPromotion' => $productData['actionPromotion'] ?? null,
