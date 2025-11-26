@@ -61,7 +61,7 @@
     let isLoading = false;
 
     function createProductCard(product) {
-        const updatedDate = new Date(product.updated_at).toLocaleString('ru-RU'); // Используем updated_at
+        const updatedDate = new Date(product.updated_at).toLocaleString('ru-RU');
         const link = document.createElement('a');
         link.href = product.url || `https://www.wildberries.ru/catalog/${product.product_id}/detail.aspx`;
         link.target = "_blank";
