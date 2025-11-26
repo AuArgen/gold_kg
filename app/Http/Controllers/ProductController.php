@@ -106,7 +106,7 @@ class ProductController extends Controller
             $query->where('discountPercentage', '>=', $minDiscount);
         }
 
-        $products = $query->latest()->paginate(50);
+        $products = $query->latest()->paginate(2000);
 
         return response()->json($products);
     }
