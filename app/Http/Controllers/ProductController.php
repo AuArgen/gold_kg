@@ -117,7 +117,7 @@ class ProductController extends Controller
             $query->where('discountPercentage', '>=', $minDiscount);
         }
 
-        $products = $query->latest()->paginate(50);
+        $products = $query->latest('updated_at')->paginate(50);
 
         return response()->json($products);
     }
@@ -125,7 +125,7 @@ class ProductController extends Controller
     public function getLatest(Request $request)
     {
         $lastId = $request->query('lastId', 0);
-        $products = Product::where('id', '>', $lastId)->latest()->get();
+        $products = Product::where('id', '>', $lastId)->latest('updated_at')->get();
         return response()->json($products);
     }
 
