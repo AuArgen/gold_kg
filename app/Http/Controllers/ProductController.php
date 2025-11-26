@@ -4,15 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Http;
 
 class ProductController extends Controller
 {
     public function store(Request $request)
     {
         $productsData = $request->input('products', []);
-        $updatedCount = 0;
-        $createdCount = 0;
+        $changedProducts = [];
 
         foreach ($productsData as $productData) {
             if (empty($productData['id'])) {
@@ -25,7 +24,6 @@ class ProductController extends Controller
             }
 
             $newPrice = $productData['currentPrice'] ?? 0;
-
             $product = Product::where('product_id', $productData['id'])->first();
 
             $dataToInsert = [
@@ -44,19 +42,48 @@ class ProductController extends Controller
                 'reviewCount' => $productData['reviewCount'] ?? null,
             ];
 
+            $url = $dataToInsert['url'] ?? '#';
+            $imageUrl = $dataToInsert['imageUrl'] ? "[.]( {$dataToInsert['imageUrl']} )" : ""; // Невидимая ссылка на картинку
+
             if ($product) {
                 if ($product->currentPrice != $newPrice) {
                     $product->update($dataToInsert);
-                    $updatedCount++;
+                    $title = $product->title;
+                    $changedProducts[] = "✏️ *[{$title}]({$url})*{$imageUrl}\n_Цена изменилась:_ {$product->currentPrice} -> {$newPrice}";
                 }
             } else {
-                Product::create(['product_id' => $productData['id']] + $dataToInsert);
-                $createdCount++;
+                $newProduct = Product::create(['product_id' => $productData['id']] + $dataToInsert);
+                $title = $newProduct->title;
+                $changedProducts[] = "✨ *[{$title}]({$url})*{$imageUrl}\n_Новый товар по цене:_ {$newPrice}";
             }
         }
 
+        if (!empty($changedProducts)) {
+            $this->sendTelegramNotification($changedProducts);
+        }
+
         return response()->json([
-            'message' => "Processing complete. Created: $createdCount, Updated: $updatedCount."
+            'message' => "Processing complete. Changes detected: " . count($changedProducts)
+        ]);
+    }
+
+    private function sendTelegramNotification(array $products)
+    {
+        $token = env('TELEGRAM_BOT_TOKEN');
+        $chatId = env('TELEGRAM_CHAT_ID');
+
+        if (!$token || !$chatId) {
+            return;
+        }
+
+        $message = "🔔 *Обновления по товарам:*\n\n";
+        $message .= implode("\n\n", $products);
+
+        Http::post("https://api.telegram.org/bot{$token}/sendMessage", [
+            'chat_id' => $chatId,
+            'text' => $message,
+            'parse_mode' => 'MarkdownV2', // Используем MarkdownV2 для лучшей поддержки
+            'disable_web_page_preview' => false, // Включаем превью для ссылок
         ]);
     }
 
@@ -79,24 +106,15 @@ class ProductController extends Controller
             $query->where('discountPercentage', '>=', $minDiscount);
         }
 
-        $products = $query->latest('updated_at')->paginate(50);
+        $products = $query->latest()->paginate(50);
 
         return response()->json($products);
     }
 
     public function getLatest(Request $request)
     {
-        $lastTimestamp = $request->query('lastTimestamp');
-
-        $query = Product::query();
-
-        if ($lastTimestamp) {
-            // Добавляем 1 секунду, чтобы не получать ту же запись снова
-            $query->where('updated_at', '>', Carbon::parse($lastTimestamp)->addSecond());
-        }
-
-        $products = $query->latest('updated_at')->get();
-
+        $lastId = $request->query('lastId', 0);
+        $products = Product::where('id', '>', $lastId)->latest()->get();
         return response()->json($products);
     }
 
