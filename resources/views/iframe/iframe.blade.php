@@ -85,11 +85,34 @@
             `;
         }
 
+        let discountBadge = '';
+        if (product.discountPercentage && product.discountPercentage > 0) {
+            discountBadge = `<span class="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">- ${product.discountPercentage}%</span>`;
+        }
+
+        let newBadge = '';
+        if (product.isNew) {
+            newBadge = `<span class="absolute top-2 left-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full">Новинка</span>`;
+        }
+
+        let ratingDisplay = '';
+        if (product.rating !== null && product.reviewCount !== null) {
+            ratingDisplay = `
+                <div class="flex items-center mt-2">
+                    <span class="text-yellow-500">★</span>
+                    <span class="ml-1 text-gray-700">${product.rating} (${product.reviewCount} отзывов)</span>
+                </div>
+            `;
+        }
+
         link.innerHTML = `
+            ${discountBadge}
+            ${newBadge}
             <img src="${product.imageUrl || 'https://via.placeholder.com/150'}" alt="${product.name}" class="w-full h-48 object-contain mb-4 rounded">
             <h3 class="text-lg font-bold text-gray-800">${product.title || product.name}</h3>
             <p class="text-gray-600">Бренд: ${product.brand || 'Неизвестно'}</p>
             ${priceDisplay}
+            ${ratingDisplay}
             <p class="text-xs text-gray-400 mt-2">Добавлено: ${creationDate}</p>
         `;
         return link;
@@ -100,13 +123,18 @@
     }
 
     function prependOrUpdateProducts(products) {
-        products.reverse().forEach(product => {
+        // Сортируем, чтобы самый новый был вверху (так как сервер отдает latest)
+        products.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+
+        products.forEach(product => {
             const existingCard = document.querySelector(`[data-product-id='${product.product_id}']`);
             if (existingCard) {
                 existingCard.remove();
             }
             productsContainer.insertBefore(createProductCard(product), productsContainer.firstChild);
         });
+
+        // Обновляем временную метку на самую свежую из полученных
         if (products.length > 0) {
             latestTimestamp = products[0].updated_at;
         }
@@ -141,9 +169,10 @@
             const result = await response.json();
 
             if (page === 1) {
-                totalProductsCount.textContent = result.total; // Обновляем общее количество
-                if (result.data.length > 0) {
-                    latestTimestamp = result.data[0].updated_at;
+                totalProductsCount.textContent = result.total;
+                if (result.data.length > 0 && !latestTimestamp) {
+                    // Устанавливаем самую свежую метку из первой загрузки
+                    latestTimestamp = result.data.reduce((max, p) => p.updated_at > max ? p.updated_at : max, result.data[0].updated_at);
                 }
             }
 
@@ -189,8 +218,7 @@
 
             if (newProducts.length > 0) {
                 prependOrUpdateProducts(newProducts);
-                // Обновляем общий счетчик
-                totalProductsCount.textContent = parseInt(totalProductsCount.textContent) + newProducts.length;
+                // Не увеличиваем счетчик, так как это могут быть обновления, а не новые товары
             }
         } catch (error) {
             console.error('Ошибка при проверке новых товаров:', error);
