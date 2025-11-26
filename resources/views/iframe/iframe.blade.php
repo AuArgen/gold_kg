@@ -66,10 +66,7 @@
         link.className = "block bg-white p-4 rounded-lg shadow-md transition-transform transform hover:-translate-y-1 relative";
         link.setAttribute('data-internal-id', product.id);
 
-        let priceChangeInfo = '';
-        if (product.discountPercentage && product.discountPercentage > 0) {
-            priceChangeInfo = `<p class="text-red-500 text-sm font-bold">↓ ${product.discountPercentage}%</p>`;
-        }
+        let priceChangeInfo =  `<p class="text-red-500 text-sm font-bold"> ${product.discountPercentage}</p>`;
 
         let priceDisplay = `<p class="text-green-600 font-semibold mt-2">${product.currentPrice} руб.</p>`;
         if (product.oldPrice && product.oldPrice > product.currentPrice) {
@@ -82,10 +79,34 @@
             `;
         }
 
+        let discountBadge = '';
+        if (product.discountPercentage && product.discountPercentage > 0) {
+            discountBadge = `<span class="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">- ${product.discountPercentage}%</span>`;
+        }
+
+        let newBadge = '';
+        if (product.isNew) {
+            newBadge = `<span class="absolute top-2 left-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full">Новинка</span>`;
+        }
+
+        let ratingDisplay = '';
+        if (product.rating !== null && product.reviewCount !== null) {
+            ratingDisplay = `
+                <div class="flex items-center mt-2">
+                    <span class="text-yellow-500">★</span>
+                    <span class="ml-1 text-gray-700">${product.rating} (${product.reviewCount} отзывов)</span>
+                </div>
+            `;
+        }
+
         link.innerHTML = `
+            ${discountBadge}
+            ${newBadge}
             <img src="${product.imageUrl || 'https://via.placeholder.com/150'}" alt="${product.name}" class="w-full h-48 object-contain mb-4 rounded">
             <h3 class="text-lg font-bold text-gray-800">${product.title || product.name}</h3>
+            <p class="text-gray-600">Бренд: ${product.brand || 'Неизвестно'}</p>
             ${priceDisplay}
+            ${ratingDisplay}
             <p class="text-xs text-gray-400 mt-2">Добавлено: ${creationDate}</p>
         `;
         return link;
@@ -168,7 +189,6 @@
     }
 
     async function checkForLatestProducts() {
-        // Не проверять, если фильтры активны или ничего еще не загружено
         if (areFiltersActive() || latestProductId === 0) {
             return;
         }
@@ -207,7 +227,6 @@
         }
     });
 
-    // Запускаем проверку новых товаров каждые 5 секунд
     setInterval(checkForLatestProducts, 500);
 
 </script>
