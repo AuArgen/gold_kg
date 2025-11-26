@@ -67,9 +67,8 @@
         link.setAttribute('data-internal-id', product.id);
 
         let priceChangeInfo = '';
-        if (product.oldPrice && product.oldPrice > product.currentPrice) {
-            const changePercent = Math.round(((product.oldPrice - product.currentPrice) / product.oldPrice) * 100);
-            priceChangeInfo = `<p class="text-red-500 text-sm font-bold">↓ ${changePercent}%</p>`;
+        if (product.discountPercentage && product.discountPercentage > 0) {
+            priceChangeInfo = `<p class="text-red-500 text-sm font-bold">↓ ${product.discountPercentage}%</p>`;
         }
 
         let priceDisplay = `<p class="text-green-600 font-semibold mt-2">${product.currentPrice} руб.</p>`;
@@ -83,13 +82,10 @@
             `;
         }
 
-        // ... (остальной код для значков)
-
         link.innerHTML = `
             <img src="${product.imageUrl || 'https://via.placeholder.com/150'}" alt="${product.name}" class="w-full h-48 object-contain mb-4 rounded">
             <h3 class="text-lg font-bold text-gray-800">${product.title || product.name}</h3>
             ${priceDisplay}
-            <!-- ... (остальные данные) ... -->
             <p class="text-xs text-gray-400 mt-2">Добавлено: ${creationDate}</p>
         `;
         return link;
@@ -97,6 +93,19 @@
 
     function appendProducts(products) {
         products.forEach(product => productsContainer.appendChild(createProductCard(product)));
+    }
+
+    function prependProducts(products) {
+        products.reverse().forEach(product => {
+            productsContainer.insertBefore(createProductCard(product), productsContainer.firstChild);
+        });
+        if (products.length > 0) {
+            latestProductId = products[0].id;
+        }
+    }
+
+    function areFiltersActive() {
+        return searchInput.value.length > 0 || brandSelect.value !== '' || discountInput.value.length > 0;
     }
 
     async function fetchProducts(page = 1, isSearch = false) {
@@ -158,6 +167,24 @@
         }
     }
 
+    async function checkForLatestProducts() {
+        // Не проверять, если фильтры активны или ничего еще не загружено
+        if (areFiltersActive() || latestProductId === 0) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`{{ route('products.latest') }}?lastId=${latestProductId}`);
+            const newProducts = await response.json();
+
+            if (newProducts.length > 0) {
+                prependProducts(newProducts);
+            }
+        } catch (error) {
+            console.error('Ошибка при проверке новых товаров:', error);
+        }
+    }
+
     function handleFilterChange() {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
@@ -180,9 +207,8 @@
         }
     });
 
-    // Real-time обновления больше не нужны при активной фильтрации,
-    // так как они могут конфликтовать с результатами.
-    // setInterval(checkForLatestProducts, 5000);
+    // Запускаем проверку новых товаров каждые 5 секунд
+    setInterval(checkForLatestProducts, 500);
 
 </script>
 
