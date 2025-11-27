@@ -49,7 +49,7 @@ class ProductController extends Controller
                 if (str_replace(' ', '', $product->currentPrice) != $newPrice) {
                     $product->update($dataToInsert);
                     $title = $this->escapeMarkdownV2($product->title);
-                    $priceChange = $this->escapeMarkdownV2("{$product->currentPrice} -> {$newPrice}");
+                    $priceChange = "{$product->currentPrice} на {$newPrice}";
                     $changedProducts[] = "✏️ *[{$title}]({$url})*{$imageUrl}\n_Цена изменилась:_ {$priceChange}";
                 }
             } else {
