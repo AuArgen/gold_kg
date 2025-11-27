@@ -23,7 +23,7 @@ class ProductController extends Controller
                 $discount = (int) preg_replace('/[^0-9-]/', '', $discount);
             }
 
-            $newPrice = $productData['currentPrice'] ?? 0;
+            $newPrice = str_replace(' ', '', $productData['currentPrice'])  ?? 0;
             $product = Product::where('product_id', $productData['id'])->first();
 
             $dataToInsert = [
@@ -33,7 +33,7 @@ class ProductController extends Controller
                 'name' => $productData['name'] ?? 'Без названия',
                 'title' => $productData['title'] ?? 'Без названия',
                 'currentPrice' => $newPrice,
-                'oldPrice' => $productData['oldPrice'] ?? null,
+                'oldPrice' => str_replace(' ', '', $productData['oldPrice']) ?? null,
                 'discountPercentage' => $discount,
                 'isNew' => $productData['isNew'] ?? false,
                 'isGoodPrice' => $productData['isGoodPrice'] ?? false,
@@ -93,8 +93,7 @@ class ProductController extends Controller
         Http::post("https://api.telegram.org/bot{$token}/sendMessage", [
             'chat_id' => $chatId,
             'text' => $message,
-            'parse_mode' => 'MarkdownV2',
-            'disable_web_page_preview' => false,
+            'parse_mode' => 'MarkdownV2'
         ]);
     }
 
