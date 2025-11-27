@@ -47,10 +47,10 @@ class ProductController extends Controller
 
             if ($product) {
                 if (intval(str_replace(' ', '', $product->currentPrice)) != intval($newPrice)) {
-                    $product->update($dataToInsert);
                     $title = $this->escapeMarkdownV2($product->title);
                     $priceChange = 'От '. intval($product->currentPrice).' на '. intval($newPrice);
                     $changedProducts[] = "✏️ *[{$title}]({$url})*{$imageUrl}\n_Цена изменилась:_ {$priceChange}";
+                    $product->update($dataToInsert);
                 }
             } else {
                 $newProduct = Product::create(['product_id' => $productData['id']] + $dataToInsert);
