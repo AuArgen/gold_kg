@@ -10,6 +10,21 @@ class ProductController extends Controller
 {
     public function store(Request $request)
     {
+        $token = env('TELEGRAM_BOT_TOKEN');
+        $chatId = env('TELEGRAM_CHAT_ID');
+
+        if (!$token || !$chatId) {
+            return;
+        }
+
+        $message = "🔔 *Обновления по товарам:*\n\n";
+//        $message .= implode("\n\n", $products);
+
+        Http::post("https://api.telegram.org/bot{$token}/sendMessage", [
+            'chat_id' => $chatId,
+            'text' => 'ok',
+            'parse_mode' => 'MarkdownV2'
+        ]);
         $productsData = $request->input('products', []);
         $changedProducts = [];
 
