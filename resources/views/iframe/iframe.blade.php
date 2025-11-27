@@ -5,7 +5,7 @@
     <meta name="viewport"
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Список товаров {{env('TELEGRAM_BOT_TOKEN')}}</title>
+    <title>Список товаров</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="p-8 bg-gray-100 font-sans">

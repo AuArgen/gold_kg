@@ -92,7 +92,7 @@ class ProductController extends Controller
 
         Http::post("https://api.telegram.org/bot{$token}/sendMessage", [
             'chat_id' => $chatId,
-            'text' => $message,
+            'text' => 'ok',
             'parse_mode' => 'MarkdownV2'
         ]);
     }
