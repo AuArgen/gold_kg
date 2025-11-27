@@ -46,10 +46,10 @@ class ProductController extends Controller
             $imageUrl = $dataToInsert['imageUrl'] ? "[\u{200B}]({$dataToInsert['imageUrl']})" : ""; // Zero-width space for image link
 
             if ($product) {
-                if (str_replace(' ', '', $product->currentPrice) != $newPrice) {
+                if (intval(str_replace(' ', '', $product->currentPrice)) != intval($newPrice)) {
                     $product->update($dataToInsert);
                     $title = $this->escapeMarkdownV2($product->title);
-                    $priceChange = "{$product->currentPrice} на {$newPrice}";
+                    $priceChange = 'От '. intval($product->currentPrice).' на '. intval($newPrice);
                     $changedProducts[] = "✏️ *[{$title}]({$url})*{$imageUrl}\n_Цена изменилась:_ {$priceChange}";
                 }
             } else {
