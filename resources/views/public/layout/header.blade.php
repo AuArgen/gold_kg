@@ -55,6 +55,11 @@
                                 Личный кабинет
                             </a>
                         </li>
+                        <li>
+                            <a href="{{ route('my-gold.index') }}" class="{{ request()->routeIs('my-gold.index') ? 'active' : '' }}">
+                                Мои слитки
+                            </a>
+                        </li>
                         <div class="divider my-0"></div>
                         {{-- Убедитесь, что маршрут 'logout' существует --}}
                         <li><a href="{{ route('logout') }}" class="text-error hover:bg-error hover:text-white">Выйти</a></li>
