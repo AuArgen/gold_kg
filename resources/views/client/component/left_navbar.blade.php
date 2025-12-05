@@ -7,7 +7,8 @@
         <ul class="menu p-0 text-base-content flex-grow space-y-2">
 
             {{-- Стилизованные кнопки для меню --}}
-            <li><a class="btn btn-sm btn-block justify-start bg-base-200">🏠 Главная</a></li>
+            <li><a href="{{ route('client.index') }}" class="btn btn-sm btn-block justify-start {{ request()->routeIs('client.index') ? 'bg-base-200' : 'btn-ghost' }}">🏠 Главная</a></li>
+            <li><a href="{{ route('my-gold.index') }}" class="btn btn-sm btn-block justify-start {{ request()->routeIs('my-gold.index') ? 'bg-base-200' : 'btn-ghost' }}">💰 Мои слитки</a></li>
 
             {{-- Блок для роли ID = 1 (Золото) --}}
             @if(Auth::check() && Auth::user()->roles()->where('role_id', 1)->exists())

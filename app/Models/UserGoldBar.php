@@ -11,9 +11,11 @@ class UserGoldBar extends Model
 
     protected $fillable = [
         'user_id',
+        'gold_bar_id',
         'purchase_date',
         'quantity',
         'purchase_price_per_bar',
+        'price_date', // Добавлено
         'comment',
     ];
 
@@ -24,10 +26,16 @@ class UserGoldBar extends Model
      */
     protected $casts = [
         'purchase_date' => 'date',
+        'price_date' => 'date', // Добавлено
     ];
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function goldBar()
+    {
+        return $this->belongsTo(Gold::class, 'gold_bar_id');
     }
 }
