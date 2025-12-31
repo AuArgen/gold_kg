@@ -1,7 +1,7 @@
 @extends('app')
 
 @section('title')
-    @yield('title', 'Цены золота кыргызстана')
+    @yield('title', 'Кыргызстандын алтын баалары')
 @endsection
 
 @section('main')

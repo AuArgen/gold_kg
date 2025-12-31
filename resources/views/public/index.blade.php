@@ -1,32 +1,135 @@
 @extends('public.layout.base')
 
-@section('title', 'Актуальные цены на золотые слитки | Калькулятор инвестиций')
-@section('description', 'Самые свежие цены на мерные золотые слитки в Кыргызстане. Динамика цен, калькуляторы прибыли и советы по инвестированию.')
+@section('title', 'Алтын куймаларынын актуалдуу баалары | Инвестициялык калькулятор')
+@section('description', 'Кыргызстандагы алтын куймаларынын эң акыркы баалары. Баалардын динамикасы, пайданы эсептөө калькуляторлору жана инвестиция боюнча кеңештер.')
 
 @section('content')
-    {{-- CDN для Chart.js (для построения графика) --}}
+    {{-- CDN Chart.js үчүн (график тартуу үчүн) --}}
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const latestPrices = @json($latestPrices);
             const goldItems = @json($golds->keyBy('id'));
-            // !!! ВАЖНО: allHistoricalPrices передается как объект JSON. !!!
+            // !!! МААНИЛҮҮ: allHistoricalPrices JSON объект катары берилет. !!!
             const allHistoricalPrices = @json($allHistoricalPrices);
 
-            // Получаем последнюю актуальную дату для сравнения в калькуляторе прибыли
+            // Пайда калькуляторунда салыштыруу үчүн акыркы датаны алабыз
             const latestDate = '{{ \Carbon\Carbon::parse($latestPublicDate)->format('Y-m-d') }}';
             const latestPricesMap = new Map();
             latestPrices.forEach(p => latestPricesMap.set(p.gold_id, p));
 
-            // Функция форматирования чисел (с пробелом в качестве разделителя тысяч)
+            // Сандарды форматтоо функциясы (миңдиктерди боштук менен бөлүү)
             function formatSom(kopecks) {
                 if (kopecks === undefined || kopecks === null) return '0.00';
                 return (kopecks / 100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
             }
 
             // =================================================================
-            // 1. КАЛЬКУЛЯТОР "СКОЛЬКО СТОИТ?" (По количеству слитков)
+            // 1.1. "АКЫРКЫ БААЛАРДЫ КӨЧҮРҮҮ" БАСКЫЧЫ
+            // =================================================================
+            const copyLatestBtn = document.getElementById('copy-latest-btn');
+            if (copyLatestBtn) {
+                copyLatestBtn.addEventListener('click', function() {
+                    if (!latestPrices || latestPrices.length === 0) return;
+
+                    // Бааларды форматтоо
+                    const textToCopy = latestPrices.map(p => {
+                        const weight = goldItems[p.gold_id] ? goldItems[p.gold_id].name : 'N/A';
+                        const price = formatSom(p.sale_kopecks);
+                        return `${weight}г: ${price} сом`;
+                    }).join('\n');
+
+                    const dateStr = '{{ \Carbon\Carbon::parse($latestPublicDate)->format('d.m.Y') }}';
+                    const fullText = `Алтын баалары (${dateStr}):\n\n${textToCopy}`;
+
+                    navigator.clipboard.writeText(fullText).then(() => {
+                        const originalContent = copyLatestBtn.innerHTML;
+                        copyLatestBtn.innerHTML = `
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                            Көчүрүлдү!
+                        `;
+                        copyLatestBtn.classList.remove('btn-outline', 'btn-primary');
+                        copyLatestBtn.classList.add('btn-success', 'text-white');
+
+                        setTimeout(() => {
+                            copyLatestBtn.innerHTML = originalContent;
+                            copyLatestBtn.classList.remove('btn-success', 'text-white');
+                            copyLatestBtn.classList.add('btn-outline', 'btn-primary');
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Көчүрүүдө ката кетти: ', err);
+                    });
+                });
+            }
+
+            // =================================================================
+            // 1.2. ТЕЗ ЭСЕПТЕГИЧ (QUICK CALCULATOR)
+            // =================================================================
+            window.openQuickCalc = function(goldId, priceKopecks, goldName) {
+                const modal = document.getElementById('quick-calc-modal');
+                const title = document.getElementById('qc-title');
+                const priceDisplay = document.getElementById('qc-price-display');
+                const qtyInput = document.getElementById('qc-qty');
+                const budgetInput = document.getElementById('qc-budget');
+                const resultDisplay = document.getElementById('qc-result');
+
+                title.textContent = `${goldName}г куймасын эсептөө`;
+                priceDisplay.textContent = `${formatSom(priceKopecks)} сом`;
+
+                qtyInput.value = '';
+                budgetInput.value = '';
+                resultDisplay.innerHTML = '<span class="text-base-content/60">Эсептөө үчүн санын же сумманы жазыңыз</span>';
+
+                function calculate() {
+                    const price = priceKopecks / 100;
+
+                    if (document.activeElement === qtyInput && qtyInput.value) {
+                        budgetInput.value = '';
+                        const qty = parseFloat(qtyInput.value);
+                        if (qty > 0) {
+                            const total = qty * price;
+                            resultDisplay.innerHTML = `
+                                <div class="text-center">
+                                    <p class="text-sm">Жалпы баасы:</p>
+                                    <p class="text-3xl font-bold text-primary">${formatSom(total * 100)} сом</p>
+                                </div>
+                            `;
+                        }
+                    }
+                    else if (document.activeElement === budgetInput && budgetInput.value) {
+                        qtyInput.value = '';
+                        const budget = parseFloat(budgetInput.value);
+                        if (budget > 0) {
+                            const count = Math.floor(budget / price);
+                            const totalCost = count * price;
+                            const remainder = budget - totalCost;
+
+                            if (count > 0) {
+                                resultDisplay.innerHTML = `
+                                    <div class="text-center">
+                                        <p class="text-sm">Сиздин акчага келет:</p>
+                                        <p class="text-3xl font-bold text-success">${count} даана</p>
+                                        <p class="text-xs text-base-content/70 mt-1">Калдык: ${formatSom(remainder * 100)} сом</p>
+                                    </div>
+                                `;
+                            } else {
+                                resultDisplay.innerHTML = `<span class="text-error">Бул акчага 1 даана да келбейт.</span>`;
+                            }
+                        }
+                    }
+                }
+
+                qtyInput.oninput = calculate;
+                budgetInput.oninput = calculate;
+
+                document.getElementById('quick-calc-checkbox').checked = true;
+                setTimeout(() => qtyInput.focus(), 100);
+            };
+
+
+            // =================================================================
+            // 1. "БААСЫ КАНЧА?" КАЛЬКУЛЯТОРУ (Куймалардын саны боюнча)
             // =================================================================
             const totalCostOutput = document.getElementById('total-cost-output');
             const quantityInputs = document.querySelectorAll('.quantity-input');
@@ -42,93 +145,116 @@
                     if (quantity > 0) {
                         hasInput = true;
                         const priceData = latestPricesMap.get(goldId);
-
                         if (priceData) {
-                            // Используем цену продажи (sale_kopecks)
                             totalKopecks += priceData.sale_kopecks * quantity;
                         }
                     }
                 });
 
                 if (hasInput) {
-                    totalCostOutput.textContent = `Общая стоимость покупки: ${formatSom(totalKopecks)} сом`;
+                    totalCostOutput.innerHTML = `Жалпы баасы: <span class="text-primary font-bold">${formatSom(totalKopecks)} сом</span>`;
                 } else {
-                    totalCostOutput.textContent = 'Введите количество слитков для расчета.';
+                    totalCostOutput.innerHTML = '<span class="text-base-content/60">Санын жазыңыз...</span>';
                 }
             }
 
             quantityInputs.forEach(input => {
                 input.addEventListener('input', calculateTotalCost);
-                calculateTotalCost();
             });
 
 
             // =================================================================
-            // 2. КАЛЬКУЛЯТОР "КУДА ВЛОЖИТЬ?" (По сумме)
+            // 2. "КАЙДА ИНВЕСТИЦИЯ КЫЛУУ КЕРЕК?" КАЛЬКУЛЯТОРУ (Сумма боюнча)
             // =================================================================
             const budgetInput = document.getElementById('budget-input');
             const investmentAdvice = document.getElementById('investment-advice');
 
             function getAdvice(budget) {
-                if (budget <= 0) return [{ text: "Введите положительную сумму для получения совета.", type: 'info' }];
+                if (budget <= 0) return [{ text: "Кеңеш алуу үчүн сумманы жазыңыз.", type: 'info' }];
 
-                const availablePrices = latestPrices
-                    .filter(p => p.sale_kopecks <= budget * 100)
+                const sortedPrices = latestPrices
                     .map(p => ({
                         ...p,
-                        weight: goldItems[p.gold_id].name,
+                        weightVal: parseFloat(goldItems[p.gold_id].name.replace(/[^0-9.]/g, '')),
+                        weightName: goldItems[p.gold_id].name,
                         priceSom: p.sale_kopecks / 100
                     }))
-                    .sort((a, b) => b.priceSom - a.priceSom);
+                    .sort((a, b) => b.weightVal - a.weightVal);
 
-                if (availablePrices.length === 0) {
-                    return [{ text: "Вашего бюджета недостаточно для покупки самого маленького слитка.", type: 'warning' }];
+                if (sortedPrices.length === 0 || sortedPrices[sortedPrices.length - 1].priceSom > budget) {
+                    return [{ text: "Сиздин бюджетиңиз эң кичинекей куйманы алууга да жетпейт.", type: 'warning' }];
                 }
 
                 const adviceList = [];
-                const maxBudgetKopecks = budget * 100;
 
-                // Совет 1: Максимальное количество самого маленького слитка (Ликвидность)
-                const smallest = availablePrices[availablePrices.length - 1];
-                if (smallest) {
-                    const count = Math.floor(maxBudgetKopecks / smallest.sale_kopecks);
-                    const totalCostK = count * smallest.sale_kopecks;
-                    const remainderK = maxBudgetKopecks - totalCostK;
-                    adviceList.push({
-                        text: `**Вариант 1 (Ликвидность):** Купите **${count} шт. по ${smallest.weight}г** (Стоимость: ${formatSom(totalCostK)} сом). Остаток: ${formatSom(remainderK)} сом.`,
-                        type: 'info'
-                    });
+                // --- ВАРИАНТ 1: Эң көп алтын (Greedy Algorithm) ---
+                let tempBudget1 = budget;
+                let basket1 = [];
+                let totalCost1 = 0;
+
+                for (let item of sortedPrices) {
+                    if (tempBudget1 >= item.priceSom) {
+                        const count = Math.floor(tempBudget1 / item.priceSom);
+                        if (count > 0) {
+                            basket1.push(`${count} даана ${item.weightName}г`);
+                            totalCost1 += count * item.priceSom;
+                            tempBudget1 -= count * item.priceSom;
+                        }
+                    }
                 }
 
-                // Совет 2: Один самый большой слиток, который доступен (Экономия)
-                const largestSingle = availablePrices[0];
-                if (largestSingle && largestSingle.id !== smallest.id) {
-                    const remainderK = maxBudgetKopecks - largestSingle.sale_kopecks;
+                if (basket1.length > 0) {
                     adviceList.push({
-                        text: `**Вариант 2 (Экономия):** Купите **1 шт. по ${largestSingle.weight}г** (Стоимость: ${formatSom(largestSingle.sale_kopecks)} сом). Остаток: ${formatSom(remainderK)} сом.`,
+                        title: "1-вариант: Эң көп алтын (Үнөмдүү)",
+                        text: `Бул акчага эң көп салмактагы алтын алуу үчүн: **${basket1.join(', ')}** алыңыз.`,
+                        subtext: `Жалпы баасы: ${formatSom(totalCost1 * 100)} сом. Калдык: ${formatSom(tempBudget1 * 100)} сом.`,
                         type: 'success'
                     });
                 }
 
-                // Совет 3: Комбинированный (1 средний + остаток на маленькие)
-                if (availablePrices.length > 1) {
-                    const mediumSized = availablePrices.find(p => p.gold_id !== smallest.gold_id && p.gold_id !== largestSingle.gold_id) || largestSingle;
-                    if (mediumSized) {
-                        const remainingBudgetK = maxBudgetKopecks - mediumSized.sale_kopecks;
-                        const countSmall = remainingBudgetK > 0 ? Math.floor(remainingBudgetK / smallest.sale_kopecks) : 0;
+                // --- ВАРИАНТ 2: Ири салым (Бир чоң куйма) ---
+                const largestSingle = sortedPrices.find(p => p.priceSom <= budget);
+                if (largestSingle) {
+                    const isDuplicate = basket1.length === 1 && basket1[0].startsWith("1 даана") && basket1[0].includes(`${largestSingle.weightName}г`);
 
-                        let totalCostK = mediumSized.sale_kopecks;
-                        let combinationText = `1 шт. по ${mediumSized.weight}г`;
-
-                        if (countSmall > 0) {
-                            totalCostK += countSmall * smallest.sale_kopecks;
-                            combinationText += ` и ${countSmall} шт. по ${smallest.weight}г`;
-                        }
-
-                        const remainderK = maxBudgetKopecks - totalCostK;
-
+                    if (!isDuplicate) {
+                        const remainder = budget - largestSingle.priceSom;
                         adviceList.push({
-                            text: `**Вариант 3 (Комбинированный):** Купите **${combinationText}** (Стоимость: ${formatSom(totalCostK)} сом). Остаток: ${formatSom(remainderK)} сом.`,
+                            title: "2-вариант: Ири салым",
+                            text: `Майдалабай, бир чоң куйма алыңыз: **1 даана ${largestSingle.weightName}г**.`,
+                            subtext: `Баасы: ${formatSom(largestSingle.priceSom * 100)} сом. Калдык: ${formatSom(remainder * 100)} сом.`,
+                            type: 'info'
+                        });
+                    }
+                }
+
+                // --- ВАРИАНТ 3: Ликвиддүүлүк (Майдалап алуу) ---
+                const liquidPrices = sortedPrices.filter(p => p.weightVal <= 10).sort((a, b) => b.weightVal - a.weightVal);
+
+                if (liquidPrices.length > 0) {
+                    let tempBudget3 = budget;
+                    let basket3 = [];
+                    let totalCost3 = 0;
+
+                    for (let item of liquidPrices) {
+                         if (tempBudget3 >= item.priceSom) {
+                            const count = Math.floor(tempBudget3 / item.priceSom);
+                            if (count > 0) {
+                                basket3.push(`${count} даана ${item.weightName}г`);
+                                totalCost3 += count * item.priceSom;
+                                tempBudget3 -= count * item.priceSom;
+                            }
+                        }
+                    }
+
+                    const basket1Str = basket1.join(', ');
+                    const basket3Str = basket3.join(', ');
+
+                    if (basket3.length > 0 && basket1Str !== basket3Str) {
+                         adviceList.push({
+                            title: "3-вариант: Ликвиддүү (Бөлүп сатууга ыңгайлуу)",
+                            text: `Кийин бөлүп сатуу үчүн майда куймаларды алыңыз: **${basket3Str}**.`,
+                            subtext: `Жалпы баасы: ${formatSom(totalCost3 * 100)} сом. Калдык: ${formatSom(tempBudget3 * 100)} сом.`,
                             type: 'warning'
                         });
                     }
@@ -142,39 +268,53 @@
                 const advice = getAdvice(budget);
                 investmentAdvice.innerHTML = '';
 
+                if (budget > 0 && advice.length === 0) {
+                     investmentAdvice.innerHTML = '<div class="alert alert-warning shadow-lg">Бул акчага ылайыктуу варианттар табылган жок.</div>';
+                     return;
+                }
+
                 advice.forEach(item => {
                     const alertDiv = document.createElement('div');
-                    alertDiv.className = `alert alert-${item.type} shadow-lg mb-3`;
+                    alertDiv.className = `alert alert-${item.type} shadow-lg mb-3 flex flex-col items-start text-left`;
+
+                    const title = item.title || 'Кеңеш';
+                    const text = item.text || '';
+                    const subtext = item.subtext || '';
+
                     alertDiv.innerHTML = `
-                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <span class="font-medium">${item.text.replace(/\*\*/g, '<strong>').replace(/\*\*/g, '</strong>')}</span>
+                        <div class="flex items-center gap-2 w-full">
+                             <span class="font-bold text-lg underline decoration-dashed">${title}</span>
+                        </div>
+                        <div class="mt-1">
+                            <p class="text-base">${text.replace(/\*\*/g, '<strong>').replace(/\*\*/g, '</strong>')}</p>
+                            <p class="text-sm opacity-80 mt-1 font-mono">${subtext}</p>
+                        </div>
                     `;
                     investmentAdvice.appendChild(alertDiv);
                 });
             }
 
             budgetInput.addEventListener('input', updateAdvice);
-            updateAdvice(); // Первичный вызов
 
 
             // =================================================================
-            // 3. КАЛЬКУЛЯТОР ПРИБЫЛИ (По граммам) - ЛОГИКА ПЕРЕМЕЩЕНА В JS
+            // 3. ПАЙДА КАЛЬКУЛЯТОРУ (Грамм боюнча)
             // =================================================================
 
-            // Текущая цена покупки 1г (для расчета прибыли)
+            // 1г сатып алуунун учурдагы баасы (пайданы эсептөө үчүн)
             const currentGramPriceK = latestPricesMap.get(1)?.buy_in_kopecks;
 
-            // Элементы формы
+            // Форма элементтери
             const customGramInput = document.getElementById('custom-gram-input');
             const purchaseDateSelect = document.getElementById('purchase-date-select');
             const purchaseGoldSelect = document.getElementById('purchase-gold-select');
             const calculateProfitButton = document.getElementById('calculate-profit-button');
             const profitOutput = document.getElementById('profit-output');
-            const historicalPriceDisplay = document.getElementById('historical-price-display'); // Для отображения исторической цены
+            const historicalPriceDisplay = document.getElementById('historical-price-display'); // Тарыхый бааны көрсөтүү үчүн
 
 
             // -----------------------------------------------------------------
-            // 3.1. Функция поиска и отображения исторической цены (UI)
+            // 3.1. Тарыхый бааны издөө жана көрсөтүү функциясы (UI)
             // -----------------------------------------------------------------
             function updateHistoricalPriceUI() {
                 const selectedDate = purchaseDateSelect.value;
@@ -185,43 +325,42 @@
 
                 if (allHistoricalPrices[selectedDate]) {
                     const items = allHistoricalPrices[selectedDate];
-                    // Find the target item (assuming items is an array of objects)
                     const targetItem = items.find(p => p.gold_id === selectedGoldId);
 
                     if (targetItem) {
-                        // Цена, по которой банк продавал (Sale Price) - это цена покупки для пользователя
+                        // Банк саткан баа (Sale Price) - бул колдонуучу үчүн сатып алуу баасы
                         historicalPriceK = targetItem.sale_kopecks;
-                        // Извлекаем вес из имени слитка (e.g., "1 г" -> "1")
+                        // Куйманын атынан салмакты алабыз (мисалы, "1 г" -> "1")
                         ingotWeightDisplay = goldItems[selectedGoldId]?.name.replace(/[^0-9.]/g, '') || '1';
                     }
                 }
 
                 if (historicalPriceK !== null && historicalPriceK > 0) {
-                    historicalPriceDisplay.innerHTML = `Историческая цена (продажи): <span class="font-bold text-primary">${formatSom(historicalPriceK)} сом за ${ingotWeightDisplay} г</span>`;
+                    historicalPriceDisplay.innerHTML = `Тарыхый баа (сатуу): <span class="font-bold text-primary">${formatSom(historicalPriceK)} сом / ${ingotWeightDisplay} г</span>`;
                     historicalPriceDisplay.classList.remove('text-error', 'text-warning');
                     historicalPriceDisplay.classList.add('text-base-content/80');
                     calculateProfitButton.disabled = false;
                 } else {
                     historicalPriceDisplay.innerHTML = `
                         <span class="font-bold text-error">
-                            Цены на ${selectedDate ? new Date(selectedDate).toLocaleDateString('ru-RU', {day: '2-digit', month: '2-digit', year: 'numeric'}) : 'выбранную дату'}
-                            для ${goldItems[selectedGoldId]?.name || 'N/A'}г отсутствуют.
+                            ${selectedDate ? new Date(selectedDate).toLocaleDateString('ru-RU', {day: '2-digit', month: '2-digit', year: 'numeric'}) : 'Тандалган дата'}
+                            үчүн ${goldItems[selectedGoldId]?.name || 'N/A'}г баасы жок.
                         </span>
                     `;
                     historicalPriceDisplay.classList.remove('text-base-content/80', 'text-warning');
                     historicalPriceDisplay.classList.add('text-error');
-                    // Если цены нет, кнопку расчета отключаем
+                    // Баа жок болсо, эсептөө баскычын өчүрөбүз
                     calculateProfitButton.disabled = true;
-                    profitOutput.innerHTML = '<span class="text-base-content/70">Выберите дату, для которой есть данные.</span>';
+                    profitOutput.innerHTML = '<span class="text-base-content/70">Маалыматтарды киргизип, "Пайданы эсептөө" баскычын басыңыз.</span>';
                 }
             }
 
 
             // -----------------------------------------------------------------
-            // 3.2. Функция расчета прибыли (Обработка клика по кнопке)
+            // 3.2. Пайданы эсептөө функциясы (Баскычты басканда)
             // -----------------------------------------------------------------
             function calculateProfit() {
-                // Очищаем вывод
+                // Чыгууну тазалоо
                 profitOutput.innerHTML = '';
 
                 const grams = parseFloat(customGramInput.value) || 0;
@@ -229,7 +368,7 @@
                 const selectedGoldId = parseInt(purchaseGoldSelect.value);
 
                 if (grams <= 0) {
-                    profitOutput.innerHTML = '<div class="alert alert-warning shadow-lg text-sm">Пожалуйста, введите количество золота в граммах.</div>';
+                    profitOutput.innerHTML = '<div class="alert alert-warning shadow-lg text-sm">Сураныч, алтындын салмагын грамм менен жазыңыз.</div>';
                     return;
                 }
 
@@ -245,20 +384,19 @@
                 }
 
                 if (historicalPriceK <= 0 || !currentGramPriceK) {
-                    // Это сообщение должно быть заблокировано функцией updateHistoricalPriceUI
-                    profitOutput.innerHTML = '<div class="alert alert-error shadow-lg text-sm">Ошибка: Историческая цена или текущая цена 1г отсутствует.</div>';
+                    profitOutput.innerHTML = '<div class="alert alert-error shadow-lg text-sm">Ката: Тарыхый баа же учурдагы 1г баасы жок.</div>';
                     return;
                 }
 
-                // Получаем вес выбранного слитка в граммах (число)
+                // Тандалган куйманын салмагын алабыз (сан түрүндө)
                 const ingotWeight = parseFloat(goldItems[selectedGoldId]?.name.replace(/[^0-9.]/g, '')) || 1;
 
-                // 1. Считаем фактическую цену покупки
-                // Цена за выбранный слиток / Вес слитка * общее количество грамм
+                // 1. Фактылуу сатып алуу баасын эсептейбиз
+                // Тандалган куйманын баасы / Куйманын салмагы * жалпы грамм
                 const totalCostK = (historicalPriceK / ingotWeight) * grams;
 
-                // 2. Считаем текущую стоимость продажи
-                // Текущая цена покупки 1г * количество грамм
+                // 2. Учурдагы сатуу баасын эсептейбиз
+                // 1г сатып алуунун учурдагы баасы * грамм саны
                 const currentValueK = currentGramPriceK * grams;
 
                 const profitK = currentValueK - totalCostK;
@@ -267,24 +405,25 @@
                 const costSom = formatSom(totalCostK);
                 const type = profitK >= 0 ? 'text-success' : 'text-error';
                 const icon = profitK >= 0 ? '▲' : '▼';
+                const profitLabel = profitK >= 0 ? 'КИРЕШЕ' : 'ЧЫГЫМ';
 
                 profitOutput.innerHTML = `
                     <div class="flex flex-col space-y-2 p-4 bg-base-300 rounded-lg shadow-md">
-                        <p class="text-sm text-base-content font-medium">Ваша стоимость покупки: <span class="font-extrabold text-secondary">${costSom} сом</span></p>
-                        <p class="text-sm text-base-content font-medium">Текущая стоимость продажи: <span class="font-extrabold text-primary">${formatSom(currentValueK)} сом</span></p>
+                        <p class="text-sm text-base-content font-medium">Сиздин сатып алуу бааңыз: <span class="font-extrabold text-secondary">${costSom} сом</span></p>
+                        <p class="text-sm text-base-content font-medium">Учурдагы сатуу баасы: <span class="font-extrabold text-primary">${formatSom(currentValueK)} сом</span></p>
                         <p class="text-lg ${type} font-bold border-t border-base-content/30 pt-2 mt-2">
-                            Ваш потенциальный ${profitK >= 0 ? 'ДОХОД' : 'УБЫТОК'}: <span class="text-2xl">${icon} ${profitSom} сом</span>
+                            Сиздин болжолдуу ${profitLabel}: <span class="text-2xl">${icon} ${profitSom} сом</span>
                         </p>
                     </div>
                 `;
             }
 
             // -----------------------------------------------------------------
-            // 3.3. Привязка событий
+            // 3.3. Окуяларды байлоо
             // -----------------------------------------------------------------
             purchaseDateSelect.addEventListener('change', updateHistoricalPriceUI);
             purchaseGoldSelect.addEventListener('change', updateHistoricalPriceUI);
-            customGramInput.addEventListener('input', updateHistoricalPriceUI); // Для активации кнопки
+            customGramInput.addEventListener('input', updateHistoricalPriceUI); // Баскычты активдештирүү үчүн
 
             calculateProfitButton.addEventListener('click', calculateProfit);
 
@@ -293,7 +432,7 @@
 
 
             // =================================================================
-            // 4. ДИНАМИКА ЦЕН (ГРАФИК)
+            // 4. БААЛАРДЫН ДИНАМИКАСЫ (ГРАФИК)
             // =================================================================
             const chartCanvas = document.getElementById('priceChart');
             const goldSelector = document.getElementById('gold-selector');
@@ -303,7 +442,7 @@
                 const dates = [];
                 const prices = [];
 
-                // Преобразуем объект в массив и сортируем по дате (старые -> новые)
+                // Объектти массивге айландырып, дата боюнча сорттойбуз (эски -> жаңы)
                 const sortedDates = Object.keys(allHistoricalPrices).sort();
 
                 sortedDates.forEach(dateStr => {
@@ -311,7 +450,7 @@
                     const targetItem = items.find(p => p.gold_id === parseInt(selectedGoldId));
 
                     if (targetItem) {
-                        // Используем JS для форматирования даты в графике
+                        // График үчүн датаны форматтоо
                         dates.push(new Date(dateStr).toLocaleDateString('ru-RU', {day: '2-digit', month: '2-digit'}));
                         prices.push(targetItem.sale_kopecks / 100);
                     }
@@ -333,7 +472,7 @@
                     data: {
                         labels: dates,
                         datasets: [{
-                            label: `Цена продажи ${goldItems[selectedGoldId].name}г (сом)`,
+                            label: `${goldItems[selectedGoldId].name}г сатуу баасы (сом)`,
                             data: prices,
                             borderColor: '#3b82f6', // blue-500 (Primary color)
                             backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -351,7 +490,7 @@
                                 beginAtZero: false,
                                 title: {
                                     display: true,
-                                    text: 'Цена (сом)'
+                                    text: 'Баа (сом)'
                                 }
                             }
                         },
@@ -379,44 +518,45 @@
 
             goldSelector.addEventListener('change', updateChart);
 
-            // Инициализация графика при загрузке
+            // Жүктөлгөндө графикти инициализациялоо
             if (goldSelector.options.length > 0) {
                 updateChart();
             }
 
             // =================================================================
-            // 5. МОДАЛЬНОЕ ОКНО ДЕТАЛЕЙ ДАТЫ (ВСПЛЫВАЮЩЕЕ ОКНО)
+            // 5. ДАТА БОЮНЧА ТОЛУК МААЛЫМАТ (МОДАЛДЫК ТЕРЕЗЕ)
             // =================================================================
 
-            // Находим все элементы с атрибутом data-date
+            // data-date атрибуту бар бардык элементтерди табабыз
             const dateTriggers = document.querySelectorAll('.date-trigger');
             const modalTitle = document.getElementById('date-modal-title');
             const modalBody = document.getElementById('date-modal-body');
             const modalDownloadLink = document.getElementById('modal-download-link');
-            const modalCheckbox = document.getElementById('date-modal'); // Ссылка на скрытый чекбокс DaisyUI
+            const modalCopyButton = document.getElementById('modal-copy-button'); // Жаңы баскыч
+            const modalCheckbox = document.getElementById('date-modal'); // DaisyUI жашыруун чекбокс
 
             dateTriggers.forEach(trigger => {
                 trigger.addEventListener('click', function(e) {
-                    e.preventDefault(); // <-- Блокируем переход по ссылке #
+                    e.preventDefault(); // <-- # шилтемесине өтүүнү бөгөттөө
 
                     const date = this.dataset.date;
                     const items = allHistoricalPrices[date];
 
                     if (!items) return;
 
-                    // Обновляем заголовок
+                    // Заголовокту жаңыртуу
                     const formattedDate = new Date(date).toLocaleDateString('ru-RU', {day: '2-digit', month: '2-digit', year: 'numeric'});
-                    modalTitle.textContent = `Цены на ${formattedDate}`;
+                    modalTitle.textContent = `${formattedDate} үчүн баалар`;
 
-                    // Обновляем тело таблицы
+                    // Таблицанын денесин жаңыртуу
                     let tableHtml = `
                         <div class="overflow-x-auto">
                             <table class="table table-compact w-full text-base">
                                 <thead>
                                     <tr>
-                                        <th>Вес (г)</th>
-                                        <th class="text-right">Покупка</th>
-                                        <th class="text-right">Продажа</th>
+                                        <th>Салмак (г)</th>
+                                        <th class="text-right">Сатып алуу</th>
+                                        <th class="text-right">Сатуу</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -439,7 +579,7 @@
                     `;
                     modalBody.innerHTML = tableHtml;
 
-                    // Обновляем ссылку на "скачать"
+                    // "Жүктөө" шилтемесин жаңыртуу
                     const downloadData = items.map(price => ({
                         date: date,
                         weight: goldItems[price.gold_id].name,
@@ -448,14 +588,45 @@
                     }));
 
                     const csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent(
-                        "Дата;Вес (г);Покупка (сом);Продажа (сом)\n" +
+                        "Дата;Салмак (г);Сатып алуу (сом);Сатуу (сом)\n" +
                         downloadData.map(e => `${e.date};${e.weight};${e.buy.replace(/ /g, '')};${e.sale.replace(/ /g, '')}`).join("\n")
                     );
 
                     modalDownloadLink.href = csvContent;
                     modalDownloadLink.download = `gold_prices_${date}.csv`;
 
-                    // Открываем модальное окно (используя DaisyUI/Tailwind trick)
+                    // "Көчүрүү" баскычынын логикасы
+                    modalCopyButton.onclick = function() {
+                        const textToCopy = items.map(price => {
+                            const weight = goldItems[price.gold_id].name;
+                            const buy = formatSom(price.buy_in_kopecks);
+                            const sale = formatSom(price.sale_kopecks);
+                            return `${weight}г: Сатып алуу ${buy} сом, Сатуу ${sale} сом`;
+                        }).join('\n');
+
+                        const fullText = `Алтын баалары (${formattedDate}):\n\n${textToCopy}`;
+
+                        navigator.clipboard.writeText(fullText).then(() => {
+                            // Ийгиликтүү көчүрүлдү деген билдирүү (мисалы, баскычтын текстин өзгөртүү)
+                            const originalText = modalCopyButton.innerHTML;
+                            modalCopyButton.innerHTML = `
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                Көчүрүлдү!
+                            `;
+                            modalCopyButton.classList.add('btn-success');
+                            modalCopyButton.classList.remove('btn-outline');
+
+                            setTimeout(() => {
+                                modalCopyButton.innerHTML = originalText;
+                                modalCopyButton.classList.remove('btn-success');
+                                modalCopyButton.classList.add('btn-outline');
+                            }, 2000);
+                        }).catch(err => {
+                            console.error('Көчүрүүдө ката кетти: ', err);
+                        });
+                    };
+
+                    // Модалдык терезени ачуу
                     modalCheckbox.checked = true;
                 });
             });
@@ -465,27 +636,71 @@
 
     <div class="max-w-7xl mx-auto my-4 px-4 sm:px-6 lg:px-8 min-h-screen">
 
-        {{-- 1. Приветствие, Описание и последняя дата обновления (УЛУЧШЕННОЕ SEO) --}}
+        {{-- 1. Саламдашуу, Сүрөттөмө жана акыркы жаңыртуу датасы --}}
         <header class="text-center py-12 bg-base-100 rounded-xl shadow-2xl mb-8">
             <h1 class="text-4xl md:text-5xl font-extrabold text-primary mb-4">
-                Слитки золота {{ env('APP_NAME') }}
+                {{ env('APP_NAME') }} - Кыргызстандагы алтын куймалары
             </h1>
-            <p class="text-lg max-w-3xl mx-auto text-base-content/80">
-                **Ваш надежный ресурс для инвестиций в золото в Кыргызстане.** Мы предоставляем актуальные цены на мерные золотые слитки, графики динамики и удобные калькуляторы для мгновенного расчета стоимости и потенциальной прибыли.
-            </p>
+            <div class="text-lg max-w-4xl mx-auto text-base-content/80 space-y-4">
+                <p>
+                    **Бул сайт – Кыргызстандагы алтынга инвестиция кылууну каалагандар үчүн ишенимдүү жардамчы.**
+                    Биз Улуттук банктын мерные (өлчөнгөн) алтын куймаларынын эң актуалдуу бааларын сунуштайбыз.
+                </p>
+                <p class="text-base">
+                    <strong>Сайттын мүмкүнчүлүктөрү:</strong>
+                </p>
+                <ul class="list-none space-y-2 text-base">
+                    <li>📊 <strong>Бааларды көзөмөлдөө:</strong> Ар бир куйманын (1г дан 100г чейин) учурдагы сатуу жана сатып алуу бааларын көрүңүз.</li>
+                    <li>📈 <strong>Аналитика:</strong> Интерактивдүү график аркылуу баалардын өсүү же төмөндөө тарыхын изилдеңиз.</li>
+                    <li>🧮 <strong>Акылдуу калькуляторлор:</strong> Бюджетиңизге жараша эң пайдалуу куймаларды тандаңыз же мурунку сатып алууларыңыздын кирешесин эсептеңиз.</li>
+                    <li>🗄️ <strong>Архив:</strong> Өткөн күндөрдүн бааларын карап чыгып, маалыматтарды CSV форматында жүктөп алыңыз.</li>
+                </ul>
+            </div>
             @if($latestPublicDate)
-                <div class="badge badge-lg badge-neutral mt-4 shadow-md">
-                    Последнее обновление цен: {{ \Carbon\Carbon::parse($latestPublicDate)->format('d.m.Y') }}
+                <div class="badge badge-lg badge-neutral mt-6 shadow-md">
+                    Баалар акыркы жолу жаңыртылды: {{ \Carbon\Carbon::parse($latestPublicDate)->format('d.m.Y') }}
                 </div>
             @endif
+
+            {{-- 1.1. ЖЕКЕ КАБИНЕТКЕ ЧАКЫРУУ БЛОГУ (ЖАҢЫ) --}}
+            <div class="mt-8 max-w-2xl mx-auto">
+                @if(Auth::check())
+                    <div class="alert shadow-lg bg-base-200 border-l-4 border-primary text-left">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-primary shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <div>
+                            <h3 class="font-bold">Салам, {{ Auth::user()->name }}!</h3>
+                            <div class="text-xs">Сиздин жеке кабинетиңизде алтын активдериңизди көзөмөлдөө мүмкүнчүлүгү бар.</div>
+                        </div>
+                        <a href="{{ route('my-gold.index') }}" class="btn btn-sm btn-primary">Кабинетке өтүү</a>
+                    </div>
+                @else
+                    <div class="alert shadow-lg bg-base-200 border-l-4 border-secondary text-left">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-secondary shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        <div>
+                            <h3 class="font-bold">Жеке портфель түзүңүз!</h3>
+                            <div class="text-xs">Катталып, өзүңүздүн алтын активдериңиздин кирешесин эсептеп туруңуз.</div>
+                        </div>
+                        <a href="{{ route('login') }}" class="btn btn-sm btn-secondary">Катталуу / Кирүү</a>
+                    </div>
+                @endif
+            </div>
+
         </header>
 
-        {{-- 2. Секция с последними ценами --}}
+        {{-- 2. Акыркы баалар бөлүмү --}}
         <section class="mb-12">
-            <h2 class="text-3xl font-bold text-center mb-6 text-base-content">Последние цены продажи</h2>
+            <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mb-6">
+                <h2 class="text-3xl font-bold text-base-content">Акыркы сатуу баалары</h2>
+                <button id="copy-latest-btn" class="btn btn-sm btn-outline btn-primary gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Көчүрүү
+                </button>
+            </div>
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 sm:gap-6">
                 @forelse($latestPrices as $price)
-                    <div class="card bg-base-200 shadow-xl border border-base-300 transform hover:scale-[1.03] transition duration-300">
+                    <div class="card bg-base-200 shadow-xl border border-base-300 transform hover:scale-[1.03] transition duration-300 relative group">
                         <div class="card-body p-4 sm:p-5 text-center">
                             <h3 class="text-lg sm:text-xl font-bold text-base-content mb-1 whitespace-nowrap">{{ $price->gold->name ?? 'N/A' }} г</h3>
                             <p class="text-xl sm:text-2xl font-extrabold text-primary">
@@ -500,21 +715,31 @@
                             <span class="text-sm font-medium {{ $colorClass }} mt-1 whitespace-nowrap">
                                 {{ $icon }} {{ number_format($absDiff, 2, '.', ' ') }}
                             </span>
+
+                            {{-- ТЕЗ ЭСЕПТӨӨ БАСКЫЧЫ (ОҢДОЛДУ: Дайыма көрүнөт) --}}
+                            <button
+                                onclick="openQuickCalc({{ $price->gold_id }}, {{ $price->sale_kopecks }}, '{{ $price->gold->name ?? '' }}')"
+                                class="btn btn-sm btn-circle btn-ghost absolute top-2 right-2 text-base-content/40 hover:text-primary hover:bg-base-300 transition-colors tooltip tooltip-left"
+                                data-tip="Тез эсептөө">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                </svg>
+                            </button>
                         </div>
                     </div>
                 @empty
-                    <div class="alert col-span-full alert-warning shadow-lg">Нет данных о ценах.</div>
+                    <div class="alert col-span-full alert-warning shadow-lg">Баалар боюнча маалымат жок.</div>
                 @endforelse
             </div>
         </section>
 
         ---
 
-        {{-- 3. График динамики цен --}}
+        {{-- 3. Баалардын динамикасы (График) --}}
         <section class="mb-12 bg-base-100 p-6 rounded-xl shadow-2xl border border-base-300">
-            <h2 class="text-3xl font-bold text-center mb-6 text-base-content">Динамика цен (График)</h2>
+            <h2 class="text-3xl font-bold text-center mb-6 text-base-content">Баалардын өзгөрүү динамикасы (График)</h2>
             <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mb-6">
-                <label for="gold-selector" class="font-medium whitespace-nowrap">Выберите слиток:</label>
+                <label for="gold-selector" class="font-medium whitespace-nowrap">Куйманы тандаңыз:</label>
                 <select id="gold-selector" class="select select-bordered w-full sm:w-1/2 md:w-1/4 bg-base-200">
                     @foreach($golds as $gold)
                         <option value="{{ $gold->id }}" @if($gold->id === 1) selected @endif>
@@ -530,42 +755,53 @@
 
         ---
 
-        {{-- 4. Секция Калькуляторов (3 колонки) --}}
+        {{-- 4. Калькуляторлор бөлүмү (3 колонка) --}}
         <section class="mb-12">
-            <h2 class="text-3xl font-bold text-center mb-6 text-base-content">Ваши помощники и расчеты</h2>
+            <h2 class="text-3xl font-bold text-center mb-6 text-base-content">Сиздин жардамчыларыңыз жана эсептөөлөр</h2>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                {{-- 4.1. Калькулятор "Куда вложить?" (По сумме) --}}
+                {{-- 4.1. "Кайда инвестиция кылуу керек?" (Сумма боюнча) --}}
                 <div class="card bg-base-100 shadow-2xl border border-base-300">
                     <div class="card-body">
-                        <h3 class="card-title text-2xl font-bold text-secondary">1. Куда вложить? (Совет)</h3>
-                        <p class="text-base-content/70 mb-4 text-sm">Введите бюджет и получите 3 выгодных варианта покупки слитков.</p>
+                        <h3 class="card-title text-2xl font-bold text-secondary">1. Кайда инвестиция кылуу керек?</h3>
+                        <p class="text-base-content/70 mb-4 text-sm">Бюджетиңизди жазыңыз, биз сизге эң пайдалуу 3 вариантты сунуштайбыз.</p>
+
+                        {{-- ЖЫЙЫНТЫК (ЖОГОРУГА ЖЫЛДЫРЫЛДЫ) --}}
+                        <div id="investment-advice" class="mb-4 min-h-[60px]">
+                            {{-- Жооптор JS аркылуу чыгат --}}
+                            <div class="alert shadow-sm bg-base-200 text-base-content/60 text-sm">
+                                Жооп алуу үчүн сумманы жазыңыз.
+                            </div>
+                        </div>
 
                         <label class="form-control w-full">
                             <div class="label">
-                                <span class="label-text">Ваш бюджет (сом)</span>
+                                <span class="label-text">Сиздин бюджет (сом)</span>
                             </div>
                             <input
                                 id="budget-input"
                                 type="number"
-                                placeholder="Например, 60000"
+                                placeholder="Мисалы, 60000"
                                 class="input input-bordered w-full bg-base-200"
                                 min="1"
                             />
                         </label>
-
-                        <div id="investment-advice" class="mt-4">
-                            {{-- Ответы генерируются JS --}}
-                        </div>
                     </div>
                 </div>
 
-                {{-- 4.2. Калькулятор "Сколько стоит?" (По количеству) --}}
+                {{-- 4.2. "Баасы канча?" (Саны боюнча) --}}
                 <div class="card bg-base-100 shadow-2xl border border-base-300">
                     <div class="card-body">
-                        <h3 class="card-title text-2xl font-bold text-secondary">2. Сколько стоит? (Сумма)</h3>
-                        <p class="text-base-content/70 mb-4 text-sm">Укажите количество слитков каждого веса для расчета общей стоимости.</p>
+                        <h3 class="card-title text-2xl font-bold text-secondary">2. Баасы канча? (Жалпы сумма)</h3>
+                        <p class="text-base-content/70 mb-4 text-sm">Ар бир куйманын санын көрсөтүп, жалпы баасын эсептеңиз.</p>
+
+                        {{-- ЖЫЙЫНТЫК (ЖОГОРУГА ЖЫЛДЫРЫЛДЫ) --}}
+                        <div class="mb-4 p-4 bg-base-200 rounded-lg shadow-inner min-h-[60px] flex items-center justify-center">
+                            <p id="total-cost-output" class="text-lg font-extrabold text-primary text-center">
+                                <span class="text-base-content/60 text-sm font-normal">Санын жазыңыз...</span>
+                            </p>
+                        </div>
 
                         <div class="grid grid-cols-2 gap-4 max-h-52 overflow-y-auto pr-2">
                             @foreach($golds as $gold)
@@ -576,52 +812,52 @@
                                     <input
                                         type="number"
                                         data-gold-id="{{ $gold->id }}"
-                                        placeholder="0 шт."
+                                        placeholder="0 даана"
                                         class="input input-bordered input-sm w-full quantity-input bg-base-200"
                                         min="0"
                                     />
                                 </label>
                             @endforeach
                         </div>
-
-                        <div class="mt-6 p-4 bg-base-200 rounded-lg shadow-inner">
-                            <p id="total-cost-output" class="text-lg font-extrabold text-primary text-center">
-                                Введите количество слитков для расчета.
-                            </p>
-                        </div>
                     </div>
                 </div>
 
-                {{-- 4.3. Калькулятор "Доход/Убыток" (По граммам) --}}
+                {{-- 4.3. "Киреше/Чыгым" (Грамм боюнча) --}}
                 <div class="card bg-base-100 shadow-2xl border border-base-300">
                     <div class="card-body">
-                        <h3 class="card-title text-2xl font-bold text-secondary">3. Моя прибыль</h3>
-                        <p class="text-base-content/70 mb-4 text-sm">Сравните цену покупки (историческую) с текущей ценой продажи.</p>
+                        <h3 class="card-title text-2xl font-bold text-secondary">3. Менин кирешем</h3>
+                        <p class="text-base-content/70 mb-4 text-sm">Сатып алуу баасын (тарыхый) учурдагы сатуу баасы менен салыштырыңыз.</p>
 
-                        {{-- ПОЛЕ ВВОДА ГРАММ --}}
+                        {{-- ЖЫЙЫНТЫК (ЖОГОРУГА ЖЫЛДЫРЫЛДЫ) --}}
+                        <div id="profit-output" class="mb-4 min-h-[60px]">
+                            <div class="alert shadow-sm bg-base-200 text-base-content/60 text-sm text-center">
+                                Маалыматтарды киргизип, "Пайданы эсептөө" баскычын басыңыз.
+                            </div>
+                        </div>
+
+                        {{-- ГРАММ ЖАЗУУ --}}
                         <label class="form-control w-full">
                             <div class="label p-0">
-                                <span class="label-text">Количество золота (грамм)</span>
+                                <span class="label-text">Алтындын саны (грамм)</span>
                             </div>
                             <input
                                 id="custom-gram-input"
                                 type="number"
-                                placeholder="Например, 10"
+                                placeholder="Мисалы, 10"
                                 class="input input-bordered w-full bg-base-200"
                                 min="0.01"
                                 step="0.01"
                             />
                         </label>
 
-                        {{-- ВЫБОР ДАТЫ --}}
+                        {{-- ДАТАНЫ ТАНДОО --}}
                         <label class="form-control w-full mt-2">
                             <div class="label p-0">
-                                <span class="label-text">Дата покупки</span>
+                                <span class="label-text">Сатып алган күн</span>
                             </div>
                             <select id="purchase-date-select" class="select select-bordered w-full bg-base-200">
                                 @php
-                                    // 1. Получаем все уникальные даты из allHistoricalPrices.
-                                    // Используем is_object() и toArray() для безопасного извлечения ключей из коллекции Laravel.
+                                    // 1. Бардык уникалдуу даталарды алабыз
                                     $availableDates = [];
                                     if (is_object($allHistoricalPrices) && method_exists($allHistoricalPrices, 'toArray')) {
                                         $availableDates = array_keys($allHistoricalPrices->toArray());
@@ -629,12 +865,12 @@
                                         $availableDates = array_keys($allHistoricalPrices);
                                     }
 
-                                    // 2. УСИЛЕННАЯ ФИЛЬТРАЦИЯ: Оставляем только строки, похожие на YYYY-MM-DD
+                                    // 2. ФИЛЬТР: YYYY-MM-DD форматындагыларды гана калтырабыз
                                     $availableDates = array_filter($availableDates, function($date) {
                                         return is_string($date) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date);
                                     });
 
-                                    // 3. Сортируем в обратном порядке (самые новые сверху)
+                                    // 3. Тескери тартипте сорттоо (жаңылары үстүндө)
                                     rsort($availableDates);
                                 @endphp
                                 @forelse($availableDates as $dateStr)
@@ -642,15 +878,15 @@
                                         {{ \Carbon\Carbon::parse($dateStr)->format('d.m.Y') }}
                                     </option>
                                 @empty
-                                    <option value="" disabled selected>Нет доступных дат</option>
+                                    <option value="" disabled selected>Даталар жок</option>
                                 @endforelse
                             </select>
                         </label>
 
-                        {{-- ВЫБОР ВЕСА СЛИТКА --}}
+                        {{-- КУЙМАНЫ ТАНДОО --}}
                         <label class="form-control w-full mt-2">
                             <div class="label p-0">
-                                <span class="label-text">Вес слитка на момент покупки</span>
+                                <span class="label-text">Сатып алуу учурундагы куйманын салмагы</span>
                             </div>
                             <select id="purchase-gold-select" class="select select-bordered w-full bg-base-200">
                                 @foreach($golds as $gold)
@@ -661,21 +897,21 @@
                             </select>
                         </label>
 
-                        {{-- Поле для отображения найденной исторической цены и ошибок --}}
+                        {{-- Табылган тарыхый бааны көрсөтүү --}}
                         <div id="historical-price-display" class="mt-2 p-2 bg-base-300 rounded-md text-sm text-base-content/80 font-medium">
-                            Историческая цена (продажи): <span class="font-bold text-primary">0.00 сом</span>
+                            Тарыхый баа (сатуу): <span class="font-bold text-primary">0.00 сом</span>
                         </div>
 
-                        {{-- КНОПКА РАСЧЕТА --}}
+                        {{-- ЭСЕПТӨӨ БАСКЫЧЫ --}}
                         <button id="calculate-profit-button" class="btn btn-primary mt-4 disabled:opacity-50" disabled>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.828l.897-.897a.75.75 0 011.06 0l.897.897zm-5.657-4.243l.897-.897a.75.75 0 011.06 0l.897.897zM2.25 12h19.5" />
                             </svg>
-                            Рассчитать прибыль
+                            Пайданы эсептөө
                         </button>
 
                         <div id="profit-output" class="mt-6 p-2 text-center">
-                            <span class="text-base-content/70">Введите данные и нажмите "Рассчитать прибыль".</span>
+                            <span class="text-base-content/70">Маалыматтарды киргизип, "Пайданы эсептөө" баскычын басыңыз.</span>
                         </div>
                     </div>
                 </div>
@@ -686,27 +922,27 @@
 
         ---
 
-        {{-- 5. Секция Истории Цен с Пагинацией и Кликабельными Датами --}}
+        {{-- 5. Баалар архиви (Пагинация жана даталар менен) --}}
         <section class="mb-12 bg-base-100 p-6 rounded-xl shadow-2xl border border-base-300">
-            <h2 class="text-3xl font-bold text-center mb-6 text-base-content">Архив цен на мерные слитки</h2>
+            <h2 class="text-3xl font-bold text-center mb-6 text-base-content">Алтын куймаларынын баалар архиви</h2>
             <p class="text-center text-sm mb-4 text-base-content/70">
-                <span class="font-bold text-primary">Нажмите на дату</span> в таблице, чтобы посмотреть подробные цены за этот день и скачать данные.
+                Таблицадагы <span class="font-bold text-primary">датаны басып</span>, ошол күнкү толук маалыматты көрүп, жүктөп алсаңыз болот.
             </p>
 
             @if($allPrices->isEmpty())
-                <div class="alert alert-info shadow-lg">Данные о ценах на золото не найдены.</div>
+                <div class="alert alert-info shadow-lg">Алтын баалары боюнча маалымат табылган жок.</div>
             @else
-                {{-- Адаптивная таблица с прокруткой --}}
+                {{-- Адаптивдүү таблица --}}
                 <div class="overflow-x-auto rounded-box border border-base-300 shadow-md">
                     <table class="table table-zebra w-full text-base">
                         <thead class="bg-base-200">
                         <tr class="text-base-content">
                             <th>Дата</th>
-                            <th class="text-center">Вес (гр)</th>
-                            <th class="text-right">Покупка (сом)</th>
-                            <th class="text-right">Продажа (сом)</th>
-                            <th class="text-center md:table-cell hidden">Δ Покупка</th>
-                            <th class="text-center">Δ Продажа</th>
+                            <th class="text-center">Салмак (гр)</th>
+                            <th class="text-right">Сатып алуу (сом)</th>
+                            <th class="text-right">Сатуу (сом)</th>
+                            <th class="text-center md:table-cell hidden">Δ Сатып алуу</th>
+                            <th class="text-center">Δ Сатуу</th>
                         </tr>
                         </thead>
 
@@ -716,33 +952,32 @@
                         @endphp
                         @foreach($allPrices as $price)
                             <tr>
-                                {{-- Дата (кликабельная) --}}
+                                {{-- Дата (басууга болот) --}}
                                 <td class="font-semibold whitespace-nowrap">
                                     @if($currentDate !== $price->public_date)
                                         @php $currentDate = $price->public_date; @endphp
-                                        {{-- Атрибут href="#" и класс date-trigger используются для вызова модального окна через JS --}}
                                         <a href="#" class="date-trigger link link-hover link-primary font-bold" data-date="{{ $price->public_date }}">
                                             {{ \Carbon\Carbon::parse($price->public_date)->format('d.m.Y') }}
                                         </a>
                                     @endif
                                 </td>
 
-                                {{-- Вес --}}
+                                {{-- Салмак --}}
                                 <td class="font-medium whitespace-nowrap text-center">
                                     {{ $price->gold->name ?? 'N/A' }} г
                                 </td>
 
-                                {{-- Цена Покупки --}}
+                                {{-- Сатып алуу баасы --}}
                                 <td class="text-right whitespace-nowrap">
                                     {{ number_format($price->buy_in_kopecks / 100, 2, '.', ' ') }}
                                 </td>
 
-                                {{-- Цена Продажи --}}
+                                {{-- Сатуу баасы --}}
                                 <td class="text-right whitespace-nowrap">
                                     {{ number_format($price->sale_kopecks / 100, 2, '.', ' ') }}
                                 </td>
 
-                                {{-- Разница Покупки (Скрыта на мобильных) --}}
+                                {{-- Сатып алуу айырмасы (Мобилдикте жашырылган) --}}
                                 <td class="text-center whitespace-nowrap md:table-cell hidden">
                                     @php
                                         $diff = $price->difference_buy_in_kopecks ?? 0;
@@ -756,7 +991,7 @@
                                         </span>
                                 </td>
 
-                                {{-- Разница Продажи --}}
+                                {{-- Сатуу айырмасы --}}
                                 <td class="text-center whitespace-nowrap">
                                     @php
                                         $diff = $price->difference_sale_kopecks ?? 0;
@@ -789,27 +1024,72 @@
 
     </div>
 
-    {{-- Модальное окно для детального просмотра и скачивания цен за дату (DaisyUI использует скрытый input/label) --}}
+    {{-- Модалдык терезе (DaisyUI) --}}
     <input type="checkbox" id="date-modal" class="modal-toggle" />
     <div class="modal" role="dialog">
         <div class="modal-box w-11/12 max-w-lg">
-            <h3 id="date-modal-title" class="font-bold text-2xl text-primary mb-4">Цены на [Дата]</h3>
+            <h3 id="date-modal-title" class="font-bold text-2xl text-primary mb-4">Баалар [Дата]</h3>
 
             <div id="date-modal-body" class="mb-4">
-                {{-- Содержимое генерируется JS --}}
+                {{-- Мазмуну JS аркылуу чыгат --}}
             </div>
 
             <div class="modal-action justify-between">
-                {{-- Ссылка для скачивания (генерируется JS) --}}
+                {{-- Көчүрүү баскычы --}}
+                <button id="modal-copy-button" class="btn btn-outline btn-info">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                    Көчүрүү
+                </button>
+
+                {{-- Жүктөө шилтемеси --}}
                 <a id="modal-download-link" href="#" class="btn btn-outline btn-success" download="gold_prices.csv">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                    Скачать CSV
+                    CSV жүктөө
                 </a>
-                <label for="date-modal" class="btn btn-primary">Закрыть</label>
+                <label for="date-modal" class="btn btn-primary">Жабуу</label>
             </div>
         </div>
-        {{-- Фон, который закрывает модальное окно при клике --}}
-        <label class="modal-backdrop" for="date-modal">Закрыть</label>
+        {{-- Фонду басканда жабылуу --}}
+        <label class="modal-backdrop" for="date-modal">Жабуу</label>
+    </div>
+
+    {{-- ЖАҢЫ МОДАЛ: ТЕЗ ЭСЕПТЕГИЧ (ОҢДОЛДУ: Жыйынтык жогоруда) --}}
+    <input type="checkbox" id="quick-calc-checkbox" class="modal-toggle" />
+    <div class="modal" role="dialog" id="quick-calc-modal">
+        <div class="modal-box">
+            <h3 id="qc-title" class="font-bold text-2xl text-center mb-2">Эсептөө</h3>
+            <p class="text-center text-base-content/70 mb-4">1 даана баасы: <span id="qc-price-display" class="font-bold text-primary">0 сом</span></p>
+
+            <div class="flex flex-col gap-4">
+                {{-- Жыйынтык (Эң жогоруга жылдырылды) --}}
+                <div id="qc-result" class="bg-base-200 p-4 rounded-xl min-h-[80px] flex items-center justify-center border border-base-300">
+                    <span class="text-base-content/60">Эсептөө үчүн санын же сумманы жазыңыз</span>
+                </div>
+
+                {{-- Санын жазуу --}}
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-medium">Канча даана аласыз?</span>
+                    </label>
+                    <input type="number" id="qc-qty" placeholder="Саны (шт)" class="input input-bordered w-full text-lg" min="1" />
+                </div>
+
+                <div class="divider my-0 text-xs">ЖЕ</div>
+
+                {{-- Сумманы жазуу --}}
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-medium">Канча акчаңыз бар? (сом)</span>
+                    </label>
+                    <input type="number" id="qc-budget" placeholder="Сумма (сом)" class="input input-bordered w-full text-lg" min="1" />
+                </div>
+            </div>
+
+            <div class="modal-action">
+                <label for="quick-calc-checkbox" class="btn">Жабуу</label>
+            </div>
+        </div>
+        <label class="modal-backdrop" for="quick-calc-checkbox">Жабуу</label>
     </div>
 
 @endsection

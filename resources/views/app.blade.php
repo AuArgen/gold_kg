@@ -21,21 +21,21 @@
 
 
 
-    {{-- SEO: Основные мета-теги --}}
-    <title>@yield('title', 'Gold KG | Актуальные цены на золото и инвестиционные калькуляторы')</title>
+    {{-- SEO: Негизги мета-тегдер --}}
+    <title>@yield('title', 'Gold KG | Алтын баалары жана инвестициялык калькуляторлор')</title>
 
-    <meta name="description" content="@yield('description', 'Актуальные цены на мерные слитки золота в сомах. Удобный калькулятор для оценки стоимости и получения советов по выгодному инвестированию в драгоценные металлы.')">
-    <meta name="keywords" content="золото, цены на золото, мерные слитки, инвестиции в золото, калькулятор золота, сом, KG">
+    <meta name="description" content="@yield('description', 'Кыргызстандагы алтын куймаларынын актуалдуу баалары. Инвестициялоо үчүн ыңгайлуу калькулятор жана пайдалуу кеңештер.')">
+    <meta name="keywords" content="алтын, алтын баасы, куймалар, инвестиция, алтын калькулятору, сом, KG, Кыргызстан">
 
-    {{-- SEO: Канонический URL (важно для избежания дублирования) --}}
+    {{-- SEO: Каноникалык URL (дубликаттарды болтурбоо үчүн) --}}
     <link rel="canonical" href="{{ url()->current() }}">
 
-    {{-- SEO: Open Graph (Для социальных сетей) --}}
-    <meta property="og:title" content="@yield('title', 'Gold KG | Актуальные цены на золото')">
-    <meta property="og:description" content="@yield('description', 'Актуальные цены на мерные слитки золота и калькуляторы для инвестиций.')">
+    {{-- SEO: Open Graph (Социалдык тармактар үчүн) --}}
+    <meta property="og:title" content="@yield('title', 'Gold KG | Алтын баалары')">
+    <meta property="og:description" content="@yield('description', 'Алтын куймаларынын актуалдуу баалары жана инвестициялык калькуляторлор.')">
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ url()->current() }}">
-    {{-- Если у вас есть логотип или изображение для превью, добавьте: --}}
+    {{-- Эгер логотип же сүрөт болсо, бул жерге кошуңуз: --}}
     {{-- <meta property="og:image" content="{{ asset('images/logo-social.png') }}"> --}}
 
 
